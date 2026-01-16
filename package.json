@@ -21,7 +21,7 @@
       "bunx biome check --write --files-ignore-unknown"
     ],
     "package.json": [
-      "format-package -w"
+      "format-package"
     ]
   },
   "devDependencies": {
