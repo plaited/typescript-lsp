@@ -17,8 +17,11 @@ claude plugins add github:plaited/typescript-lsp/plugin
 ```
 
 **Other AI coding agents:**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/plaited/marketplace/main/install.sh | bash -s -- --plugin typescript-lsp
+curl -fsSL https://raw.githubusercontent.com/plaited/marketplace/main/install.sh | bash -s -- --agent <agent-name> --plugin typescript-lsp
+
+Supported agents: gemini, copilot, cursor, opencode, amp, goose, factory
 ```
 
 ## Features
