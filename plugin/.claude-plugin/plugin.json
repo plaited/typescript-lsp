@@ -1,6 +1,6 @@
 {
-  "name": "typescript-lsp",
-  "description": "Type-aware TypeScript/JavaScript symbol search using Language Server Protocol",
+  "name": "development-skills",
+  "description": "Development skills for Claude Code - TypeScript LSP, code documentation, and validation tools",
   "version": "0.2.0",
   "author": {
     "name": "Plaited Labs"

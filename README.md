@@ -1,6 +1,6 @@
-# typescript-lsp
+# development-skills
 
-TypeScript LSP skill for Claude Code - type-aware symbol search and verification.
+Development skills for Claude Code - TypeScript LSP, code documentation, and validation tools.
 
 ## Installation
 
@@ -13,20 +13,22 @@ claude plugins add github:plaited/marketplace
 Or install directly:
 
 ```bash
-claude plugins add github:plaited/typescript-lsp/plugin
+claude plugins add github:plaited/development-skills/plugin
 ```
 
 **Other AI coding agents:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/plaited/marketplace/main/install.sh | bash -s -- --agent <agent-name> --plugin typescript-lsp
+curl -fsSL https://raw.githubusercontent.com/plaited/marketplace/main/install.sh | bash -s -- --agent <agent-name> --plugin development-skills
 
 Supported agents: gemini, copilot, cursor, opencode, amp, goose, factory
 ```
 
-## Features
+## Skills
 
-This plugin provides TypeScript Language Server Protocol integration for exploring and understanding TypeScript/JavaScript codebases.
+### TypeScript LSP
+
+TypeScript Language Server Protocol integration for exploring and understanding TypeScript/JavaScript codebases.
 
 **Use LSP over Grep/Glob when:**
 - Finding all usages of a function/type (LSP understands re-exports, aliases)
@@ -34,9 +36,9 @@ This plugin provides TypeScript Language Server Protocol integration for explori
 - Understanding file exports (LSP resolves re-exports)
 - Getting type signatures (not possible with grep)
 
-## Commands
+#### Commands
 
-### `/lsp-hover`
+##### `/lsp-hover`
 
 Get type information at a specific position.
 
@@ -44,7 +46,7 @@ Get type information at a specific position.
 /lsp-hover src/utils/parser.ts 42 10
 ```
 
-### `/lsp-find`
+##### `/lsp-find`
 
 Search for symbols across the workspace.
 
@@ -53,7 +55,7 @@ Search for symbols across the workspace.
 /lsp-find validateInput src/lib/validator.ts
 ```
 
-### `/lsp-refs`
+##### `/lsp-refs`
 
 Find all references to a symbol (before refactoring).
 
@@ -61,7 +63,7 @@ Find all references to a symbol (before refactoring).
 /lsp-refs src/utils/parser.ts 42 10
 ```
 
-### `/lsp-analyze`
+##### `/lsp-analyze`
 
 Batch analysis of a file.
 
@@ -71,7 +73,7 @@ Batch analysis of a file.
 /lsp-analyze src/utils/parser.ts --hover 50:10 --refs 60:5
 ```
 
-## Path Resolution
+#### Path Resolution
 
 All commands accept:
 - **Absolute paths**: `/Users/name/project/src/file.ts`
