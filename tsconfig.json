@@ -1,5 +1,5 @@
 {
-  "include": ["plugin/**/*"],
+  "include": [".claude/**/*"],
   "compilerOptions": {
     // Enable latest features
     "lib": ["ESNext", "DOM", "dom.iterable"],
