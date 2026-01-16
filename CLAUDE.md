@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Overview
+
+This repository hosts the **development-skills** Claude Code plugin, providing development tools including TypeScript LSP integration, code documentation utilities, and skill validation.
+
 ## Essential Commands
 
 ### Development Setup
@@ -34,15 +38,17 @@ This project uses `.claude/rules/` for project-specific guidance:
 
 ### Plugin Overview
 
-This repository hosts the **typescript-lsp** Claude Code plugin, providing type-aware TypeScript/JavaScript symbol search and verification.
+This repository hosts the **development-skills** Claude Code plugin with the following skills:
 
-**Available commands:**
+**TypeScript LSP** (`/lsp-*` commands):
 - `/lsp-hover` - Get type information at a position
 - `/lsp-find` - Search for symbols across workspace
 - `/lsp-refs` - Find all references to a symbol
 - `/lsp-analyze` - Batch analysis of a file
 
-**Key capability:** Uses TypeScript Language Server Protocol for accurate, type-aware code exploration - better than grep for finding symbols, understanding exports, and verifying types.
+**Code Documentation** - Documentation generation utilities
+
+**Skill Validation** (`/validate-skill`) - Validate skills against AgentSkills spec
 
 ### Code Style Essentials
 
@@ -57,7 +63,9 @@ For complete conventions, see `.claude/rules/code-review.md`
 ### Plugin Development
 
 This project is a Claude Code plugin. Structure:
-- `plugin/skills/typescript-lsp/` - Skill with LSP scripts
+- `plugin/skills/typescript-lsp/` - TypeScript LSP skill
+- `plugin/skills/code-documentation/` - Code documentation skill
+- `plugin/skills/validate-skill/` - Skill validation skill
 - `plugin/commands/` - Slash command definitions
 - `.claude/rules/` - Development guidance (not published)
 
@@ -82,12 +90,20 @@ When working on the plugin:
 
 ## Plugin
 
-The **typescript-lsp** plugin (`plugin/skills/typescript-lsp/`) provides:
+The **development-skills** plugin provides:
+
+**TypeScript LSP** (`plugin/skills/typescript-lsp/`):
 - Type-aware symbol search across workspace
 - Hover information (type signatures, docs)
 - Reference finding before refactoring
 - Batch analysis for efficiency
 
+**Code Documentation** (`plugin/skills/code-documentation/`):
+- Documentation generation utilities
+
+**Skill Validation** (`plugin/skills/validate-skill/`):
+- Validate skills against AgentSkills spec
+
 Install via marketplace: `github:plaited/marketplace`
 
-See `plugin/skills/typescript-lsp/SKILL.md` for complete documentation.
+See individual skill SKILL.md files for complete documentation.
