@@ -180,28 +180,28 @@ describe('LspClient', () => {
     test('timeout error includes timeout value and actionable suggestion', async () => {
       const shortTimeoutClient = new LspClient({ rootUri, requestTimeout: 100 })
 
-      await shortTimeoutClient.start()
-
-      // Open a document to avoid "No Project" errors
-      const text = await Bun.file(testFile).text()
-      shortTimeoutClient.openDocument(testUri, 'typescript', 1, text)
-
-      // Try a request that might timeout
-      // If it completes successfully, that's fine - we're primarily checking the error message format
       try {
-        await shortTimeoutClient.references(testUri, 0, 0)
-      } catch (error) {
-        // If it times out, verify the error message includes actionable information
-        if (error instanceof Error && error.message.includes('timeout')) {
-          expect(error.message).toContain('100ms')
-          expect(error.message).toContain('--timeout 200') // Should suggest 2x timeout
-          expect(error.message).toMatch(/LSP request timeout:/)
-        }
-        // If it's some other error, that's also acceptable
-      }
+        await shortTimeoutClient.start()
 
-      shortTimeoutClient.closeDocument(testUri)
-      await shortTimeoutClient.stop()
+        // Open a document to avoid "No Project" errors
+        const text = await Bun.file(testFile).text()
+        shortTimeoutClient.openDocument(testUri, 'typescript', 1, text)
+
+        // Try a request that might timeout
+        await shortTimeoutClient.references(testUri, 0, 0)
+
+        // If we get here, the request didn't timeout - clean up and skip assertions
+        shortTimeoutClient.closeDocument(testUri)
+        await shortTimeoutClient.stop()
+      } catch (error) {
+        // Verify the timeout error message includes actionable information
+        expect(error).toBeInstanceOf(Error)
+        const errorMessage = (error as Error).message
+        expect(errorMessage).toContain('timeout')
+        expect(errorMessage).toContain('100ms')
+        expect(errorMessage).toContain('--timeout 200') // Should suggest 2x timeout
+        expect(errorMessage).toMatch(/LSP request timeout:/)
+      }
     }, 10000)
   })
 
