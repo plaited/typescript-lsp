@@ -1,13 +1,20 @@
 ---
-description: Search for TypeScript symbols across the workspace by name
+description: Type-aware symbol search across workspace (use /fast-find for quick text search)
 allowed-tools: Bash, Glob
 ---
 
 # LSP Find
 
-Search for symbols (functions, types, classes, variables) across the TypeScript/JavaScript codebase.
+**Type-aware** symbol search across the TypeScript/JavaScript codebase. Understands type aliases, re-exports, and symbol scope.
 
 **Arguments:** $ARGUMENTS
+
+**When to use:**
+- Need accurate symbol matching (not just text)
+- Understanding type aliases and re-exports
+- Symbol disambiguation (e.g., multiple `Config` types)
+
+**For faster text-based search, use `/fast-find` instead.**
 
 ## Usage
 

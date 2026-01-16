@@ -30,4 +30,35 @@ describe('resolveFilePath', () => {
 
     expect(result).toBe(`${process.cwd()}/${invalidPath}`)
   })
+
+  test('resolves relative path from basePath', async () => {
+    const basePath = '/Users/test/src/module.ts'
+    const relativePath = './utils.ts'
+    const result = await resolveFilePath(relativePath, basePath)
+
+    expect(result).toBe('/Users/test/src/./utils.ts')
+  })
+
+  test('resolves parent relative path from basePath', async () => {
+    const basePath = '/Users/test/src/deep/module.ts'
+    const relativePath = '../utils.ts'
+    const result = await resolveFilePath(relativePath, basePath)
+
+    expect(result).toBe('/Users/test/src/deep/../utils.ts')
+  })
+
+  test('ignores basePath for absolute paths', async () => {
+    const basePath = '/Users/test/src/module.ts'
+    const absolutePath = '/Users/other/file.ts'
+    const result = await resolveFilePath(absolutePath, basePath)
+
+    expect(result).toBe(absolutePath)
+  })
+
+  test('uses cwd when basePath not provided', async () => {
+    const relativePath = './file.ts'
+    const result = await resolveFilePath(relativePath)
+
+    expect(result).toBe(`${process.cwd()}/${relativePath}`)
+  })
 })
