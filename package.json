@@ -1,6 +1,6 @@
 {
   "name": "@plaited/development-skills",
-  "description": "TypeScript LSP skill for Claude Code - type-aware symbol search and verification",
+  "description": "Development skills for Claude Code - TypeScript LSP, code documentation, and validation tools",
   "license": "ISC",
   "private": true,
   "engines": {
