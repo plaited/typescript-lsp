@@ -2,29 +2,60 @@
 /**
  * Search for symbols across the workspace by name
  *
- * Usage: bun lsp-find.ts <query> [file]
+ * Usage: bun lsp-find.ts <query> [file] [options]
  */
 
 import { parseArgs } from 'node:util'
 import { LspClient } from './lsp-client.ts'
 import { resolveFilePath } from './resolve-file-path.ts'
 
-const { positionals } = parseArgs({
+const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
+  options: {
+    timeout: { type: 'string' },
+    debug: { type: 'boolean', short: 'd' },
+    help: { type: 'boolean', short: 'h' },
+  },
   allowPositionals: true,
 })
+
+if (values.help) {
+  console.log(`
+LSP Find - Search for symbols across the workspace
+
+Usage: bun lsp-find.ts <query> [file] [options]
+
+Arguments:
+  query  Symbol name or partial name to search
+  file   Optional file to open for project context
+
+Options:
+  --timeout <ms>  Request timeout in milliseconds (default: 60000)
+  --debug, -d     Enable debug logging to stderr
+  --help, -h      Show this help
+
+Examples:
+  bun lsp-find.ts parseConfig
+  bun lsp-find.ts validateInput src/lib/validator.ts
+  bun lsp-find.ts UserConfig --timeout 120000 --debug
+`)
+  process.exit(0)
+}
 
 const [query, filePath] = positionals
 
 if (!query) {
-  console.error('Usage: bun lsp-find.ts <query> [file]')
+  console.error('Usage: bun lsp-find.ts <query> [file] [options]')
   console.error('  query: Symbol name or partial name to search')
   console.error('  file: Optional file to open for project context')
+  console.error('  Run with --help for more options')
   process.exit(1)
 }
 
 const rootUri = `file://${process.cwd()}`
-const client = new LspClient({ rootUri })
+const timeout = values.timeout ? parseInt(values.timeout, 10) : 60000
+const debug = values.debug ?? false
+const client = new LspClient({ rootUri, requestTimeout: timeout, debug })
 
 /**
  * Find a default context file when none is provided

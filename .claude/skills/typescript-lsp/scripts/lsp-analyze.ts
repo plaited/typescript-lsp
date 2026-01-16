@@ -63,6 +63,8 @@ const { values, positionals } = parseArgs({
     hover: { type: 'string', multiple: true },
     refs: { type: 'string', multiple: true },
     all: { type: 'boolean' },
+    timeout: { type: 'string' },
+    debug: { type: 'boolean', short: 'd' },
     help: { type: 'boolean', short: 'h' },
   },
   allowPositionals: true,
@@ -80,6 +82,8 @@ Options:
   --hover <line:char> Get type info at position (can be repeated)
   --refs <line:char>  Find references at position (can be repeated)
   --all               Run all analyses (symbols + exports)
+  --timeout <ms>      Request timeout in milliseconds (default: 60000)
+  --debug, -d         Enable debug logging to stderr
   --help, -h          Show this help
 
 Examples:
@@ -87,6 +91,7 @@ Examples:
   bun lsp-analyze.ts plaited/main/b-element.ts --symbols
   bun lsp-analyze.ts plaited/main/b-element.ts --hover 50:15 --hover 60:20
   bun lsp-analyze.ts plaited/main/b-element.ts --refs 10:8
+  bun lsp-analyze.ts plaited/main/b-element.ts --all --timeout 120000 --debug
 `)
   process.exit(0)
 }
@@ -96,7 +101,16 @@ const absolutePath = await resolveFilePath(filePath)
 const uri = `file://${absolutePath}`
 const rootUri = `file://${process.cwd()}`
 
-const client = new LspClient({ rootUri })
+const timeout = values.timeout ? parseInt(values.timeout, 10) : 60000
+const debug = values.debug ?? false
+
+if (debug) {
+  console.error(`[DEBUG] File: ${filePath}`)
+  console.error(`[DEBUG] Absolute path: ${absolutePath}`)
+  console.error(`[DEBUG] Timeout: ${timeout}ms`)
+}
+
+const client = new LspClient({ rootUri, requestTimeout: timeout, debug })
 
 type AnalysisResult = {
   file: string
@@ -122,7 +136,9 @@ const extractSymbols = (symbols: SymbolInfo[], prefix = ''): Array<{ name: strin
 }
 
 try {
+  if (debug) console.error('[DEBUG] Starting LSP server...')
   await client.start()
+  if (debug) console.error('[DEBUG] LSP server started')
 
   const file = Bun.file(absolutePath)
   if (!(await file.exists())) {
@@ -130,6 +146,7 @@ try {
     process.exit(1)
   }
 
+  if (debug) console.error('[DEBUG] Reading file...')
   const text = await file.text()
   const languageId = absolutePath.endsWith('.tsx')
     ? 'typescriptreact'
@@ -139,13 +156,16 @@ try {
         ? 'javascriptreact'
         : 'javascript'
 
+  if (debug) console.error(`[DEBUG] Opening document (${languageId})...`)
   client.openDocument(uri, languageId, 1, text)
 
   const result: AnalysisResult = { file: filePath }
 
   // Get symbols if requested
   if (values.symbols || values.exports || values.all) {
+    if (debug) console.error('[DEBUG] Fetching document symbols...')
     const symbols = (await client.documentSymbols(uri)) as SymbolInfo[]
+    if (debug) console.error(`[DEBUG] Got ${symbols.length} symbols`)
     const extracted = extractSymbols(symbols)
 
     if (values.symbols || values.all) {
@@ -153,17 +173,20 @@ try {
     }
 
     if (values.exports || values.all) {
+      if (debug) console.error('[DEBUG] Filtering exports...')
       // Filter to only top-level exports (items that start with export in source)
       const lines = text.split('\n')
       result.exports = extracted.filter((sym) => {
         const line = lines[sym.line]
         return line?.includes('export')
       })
+      if (debug) console.error(`[DEBUG] Found ${result.exports.length} exports`)
     }
   }
 
   // Get hover info if requested
   if (values.hover?.length) {
+    if (debug) console.error(`[DEBUG] Fetching hover info for ${values.hover.length} position(s)...`)
     result.hovers = []
     for (const pos of values.hover) {
       const parts = pos.split(':')
@@ -173,6 +196,7 @@ try {
       const char = parseInt(charStr, 10)
 
       if (!Number.isNaN(line) && !Number.isNaN(char)) {
+        if (debug) console.error(`[DEBUG] Hover at ${pos}...`)
         const hover = await client.hover(uri, line, char)
         result.hovers.push({ position: pos, content: hover })
       }
@@ -181,6 +205,7 @@ try {
 
   // Get references if requested
   if (values.refs?.length) {
+    if (debug) console.error(`[DEBUG] Fetching references for ${values.refs.length} position(s)...`)
     result.references = []
     for (const pos of values.refs) {
       const parts = pos.split(':')
@@ -190,14 +215,18 @@ try {
       const char = parseInt(charStr, 10)
 
       if (!Number.isNaN(line) && !Number.isNaN(char)) {
+        if (debug) console.error(`[DEBUG] References at ${pos}...`)
         const refs = await client.references(uri, line, char, true)
         result.references.push({ position: pos, locations: refs })
       }
     }
   }
 
+  if (debug) console.error('[DEBUG] Closing document...')
   client.closeDocument(uri)
+  if (debug) console.error('[DEBUG] Stopping LSP server...')
   await client.stop()
+  if (debug) console.error('[DEBUG] Done')
 
   console.log(JSON.stringify(result, null, 2))
 } catch (error) {
