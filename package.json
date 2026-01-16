@@ -18,7 +18,7 @@
   },
   "lint-staged": {
     "*.{js,cjs,jsx,tsx,ts}": [
-      "bunx biome check --write --files-ignore-unknown=true"
+      "bunx biome check --write"
     ],
     "package.json": [
       "format-package"
