@@ -390,16 +390,23 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
   for (const file of rulesToProcess) {
     const templatePath = join(packageRulesDir, file)
-    const content = await Bun.file(templatePath).text()
     const ruleId = file.replace('.md', '')
 
-    // Process template
-    const processed = processTemplate(content, context)
+    try {
+      const content = await Bun.file(templatePath).text()
 
-    templates[ruleId] = {
-      filename: file,
-      content: processed,
-      description: extractDescription(processed),
+      // Process template
+      const processed = processTemplate(content, context)
+
+      templates[ruleId] = {
+        filename: file,
+        content: processed,
+        description: extractDescription(processed),
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`Error processing template ${file}: ${message}`)
+      process.exit(1)
     }
   }
 

@@ -73,31 +73,37 @@ Options:
 }
 
 // Route to appropriate command
-switch (command) {
-  case 'lsp-hover':
-    await lspHover(args)
-    break
-  case 'lsp-find':
-    await lspFind(args)
-    break
-  case 'lsp-refs':
-  case 'lsp-references':
-    await lspRefs(args)
-    break
-  case 'lsp-symbols':
-    await lspSymbols(args)
-    break
-  case 'lsp-analyze':
-    await lspAnalyze(args)
-    break
-  case 'validate-skill':
-    await validateSkill(args)
-    break
-  case 'scaffold-rules':
-    await scaffoldRules(args)
-    break
-  default:
-    console.error(`Unknown command: ${command}`)
-    console.error('Run `development-skills --help` for usage')
-    process.exit(1)
+try {
+  switch (command) {
+    case 'lsp-hover':
+      await lspHover(args)
+      break
+    case 'lsp-find':
+      await lspFind(args)
+      break
+    case 'lsp-refs':
+    case 'lsp-references':
+      await lspRefs(args)
+      break
+    case 'lsp-symbols':
+      await lspSymbols(args)
+      break
+    case 'lsp-analyze':
+      await lspAnalyze(args)
+      break
+    case 'validate-skill':
+      await validateSkill(args)
+      break
+    case 'scaffold-rules':
+      await scaffoldRules(args)
+      break
+    default:
+      console.error(`Unknown command: ${command}`)
+      console.error('Run `development-skills --help` for usage')
+      process.exit(1)
+  }
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error)
+  console.error(`Error: ${message}`)
+  process.exit(1)
 }

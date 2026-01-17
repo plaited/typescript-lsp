@@ -34,11 +34,19 @@ type ValidationResult = {
   properties?: SkillProperties
 }
 
+/**
+ * Validation constants from AgentSkills specification
+ * @see https://agentskills.io/specification
+ */
 const ALLOWED_FIELDS = new Set(['name', 'description', 'license', 'compatibility', 'allowed-tools', 'metadata'])
 const REQUIRED_FIELDS = ['name', 'description'] as const
+/** Must be lowercase alphanumeric with optional hyphens (no consecutive hyphens, no leading/trailing) */
 const NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
+/** Spec: name must be 1-64 characters */
 const MAX_NAME_LENGTH = 64
+/** Spec: description must be 1-1024 characters */
 const MAX_DESCRIPTION_LENGTH = 1024
+/** Spec: compatibility must be 1-500 characters if provided */
 const MAX_COMPATIBILITY_LENGTH = 500
 
 /**
