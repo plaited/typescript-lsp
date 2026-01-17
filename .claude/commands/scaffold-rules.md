@@ -185,12 +185,18 @@ bunx @plaited/development-skills scaffold-rules
 # Universal AGENTS.md format (works with Cursor, Factory, Copilot, Windsurf, Cline, Aider, etc.)
 bunx @plaited/development-skills scaffold-rules --agent=agents-md
 
+# Custom paths (for specific agent directories or monorepos)
+bunx @plaited/development-skills scaffold-rules --agent=agents-md --rules-dir=.cursor/rules
+bunx @plaited/development-skills scaffold-rules --agent=agents-md --agents-md-path=docs/AGENTS.md
+
 # Filter specific rules
 bunx @plaited/development-skills scaffold-rules --rules testing --rules bun-apis
 ```
 
 **Options:**
 - `--agent` / `-a`: Target format (`claude` or `agents-md`)
+- `--rules-dir` / `-d`: Custom rules directory path (overrides default)
+- `--agents-md-path` / `-m`: Custom AGENTS.md file path (default: `AGENTS.md`)
 - `--format` / `-f`: Output format (json)
 - `--rules` / `-r`: Specific rules to include (can be used multiple times)
 
@@ -200,6 +206,7 @@ The JSON output includes metadata about the target:
 {
   "agent": "agents-md",
   "rulesPath": ".plaited/rules",
+  "agentsMdPath": "AGENTS.md",
   "format": "agents-md",
   "supportsAgentsMd": true,
   "agentsMdContent": "# AGENTS.md\n...",
@@ -208,7 +215,7 @@ The JSON output includes metadata about the target:
 ```
 
 For `agents-md` format, write:
-1. Individual rule files to `.plaited/rules/`
-2. The `agentsMdContent` to `AGENTS.md` in project root
+1. Individual rule files to the path specified in `rulesPath`
+2. The `agentsMdContent` to the path specified in `agentsMdPath`
 
 This provides maximum portability - rules work with any AGENTS.md-compatible agent (60,000+ projects support this format).

@@ -11,6 +11,7 @@ type Template = {
 type ScaffoldOutput = {
   agent: string
   rulesPath: string
+  agentsMdPath: string
   format: 'multi-file' | 'agents-md'
   supportsAgentsMd: boolean
   agentsMdContent?: string
@@ -227,6 +228,59 @@ describe('scaffold-rules', () => {
       const accuracy = result.templates.accuracy
       expect(accuracy).toBeDefined()
       expect(accuracy!.content).toContain('.plaited/rules/testing.md')
+    })
+  })
+
+  describe('path customization', () => {
+    test('includes default agentsMdPath in output', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --format=json`.json()
+
+      expect(result.agentsMdPath).toBe('AGENTS.md')
+    })
+
+    test('--rules-dir overrides default rules path', async () => {
+      const result: ScaffoldOutput =
+        await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --rules-dir=.cursor/rules --format=json`.json()
+
+      expect(result.rulesPath).toBe('.cursor/rules')
+      // AGENTS.md content should use custom path
+      expect(result.agentsMdContent).toContain('.cursor/rules/')
+      expect(result.agentsMdContent).not.toContain('.plaited/rules/')
+    })
+
+    test('--agents-md-path overrides default AGENTS.md location', async () => {
+      const result: ScaffoldOutput =
+        await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --agents-md-path=docs/AGENTS.md --format=json`.json()
+
+      expect(result.agentsMdPath).toBe('docs/AGENTS.md')
+    })
+
+    test('cross-references use custom rules-dir', async () => {
+      const result: ScaffoldOutput =
+        await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --rules-dir=.factory/rules --format=json`.json()
+
+      const accuracy = result.templates.accuracy
+      expect(accuracy).toBeDefined()
+      expect(accuracy!.content).toContain('.factory/rules/testing.md')
+    })
+
+    test('short flags work (-d and -m)', async () => {
+      const result: ScaffoldOutput =
+        await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md -d custom/rules -m custom/AGENTS.md --format=json`.json()
+
+      expect(result.rulesPath).toBe('custom/rules')
+      expect(result.agentsMdPath).toBe('custom/AGENTS.md')
+    })
+
+    test('claude agent also respects --rules-dir', async () => {
+      const result: ScaffoldOutput =
+        await $`bun ${binDir}/cli.ts scaffold-rules --agent=claude --rules-dir=.my-rules --format=json`.json()
+
+      expect(result.rulesPath).toBe('.my-rules')
+      // Cross-references should use custom path
+      const accuracy = result.templates.accuracy
+      expect(accuracy).toBeDefined()
+      expect(accuracy!.content).toContain('@.my-rules/testing.md')
     })
   })
 })

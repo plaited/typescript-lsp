@@ -10,6 +10,12 @@
  * - agents-md: Universal AGENTS.md format with .plaited/rules/
  *   (works with Cursor, Factory, Copilot, Windsurf, Cline, Aider, and 60,000+ others)
  *
+ * Options:
+ * - --agent, -a: Target format (claude | agents-md)
+ * - --rules-dir, -d: Custom rules directory path (overrides default)
+ * - --agents-md-path, -m: Custom AGENTS.md file path (default: AGENTS.md)
+ * - --rules, -r: Filter to specific rules (can be used multiple times)
+ *
  * Template syntax:
  * - {{LINK:rule-id}} - Cross-reference to another rule
  * - {{#if development-skills}}...{{/if}} - Conditional block
@@ -23,8 +29,13 @@
  *
  * @example
  * ```bash
+ * # Default paths
  * bunx @plaited/development-skills scaffold-rules --agent=claude
  * bunx @plaited/development-skills scaffold-rules --agent=agents-md
+ *
+ * # Custom paths
+ * bunx @plaited/development-skills scaffold-rules --agent=agents-md --rules-dir=.cursor/rules
+ * bunx @plaited/development-skills scaffold-rules --agent=agents-md --agents-md-path=docs/AGENTS.md
  * ```
  */
 
@@ -65,6 +76,7 @@ type ProcessedTemplate = {
 type ScaffoldOutput = {
   agent: Agent
   rulesPath: string
+  agentsMdPath: string
   format: 'multi-file' | 'agents-md'
   supportsAgentsMd: boolean
   agentsMdContent?: string
@@ -205,8 +217,8 @@ const generateCrossReference = (ruleId: string, context: TemplateContext): strin
     // Claude Code uses @ syntax for file references
     return `@${context.rulesPath}/${ruleId}.md`
   }
-  // AGENTS.md links to .plaited/rules/
-  return `.plaited/rules/${ruleId}.md`
+  // Use context.rulesPath for cross-references (supports custom --rules-dir)
+  return `${context.rulesPath}/${ruleId}.md`
 }
 
 /**
@@ -271,9 +283,9 @@ const getOutputFormat = (agent: Agent): 'multi-file' | 'agents-md' => {
 }
 
 /**
- * Generate AGENTS.md content that links to .plaited/rules/
+ * Generate AGENTS.md content that links to rules directory
  */
-const generateAgentsMd = (templates: Record<string, ProcessedTemplate>): string => {
+const generateAgentsMd = (templates: Record<string, ProcessedTemplate>, rulesPath: string): string => {
   const lines = [
     '# AGENTS.md',
     '',
@@ -281,13 +293,13 @@ const generateAgentsMd = (templates: Record<string, ProcessedTemplate>): string 
     '',
     '## Rules',
     '',
-    'This project uses modular development rules stored in `.plaited/rules/`.',
+    `This project uses modular development rules stored in \`${rulesPath}/\`.`,
     'Each rule file covers a specific topic:',
     '',
   ]
 
   for (const [ruleId, template] of Object.entries(templates)) {
-    lines.push(`- [${ruleId}](.plaited/rules/${template.filename}) - ${template.description}`)
+    lines.push(`- [${ruleId}](${rulesPath}/${template.filename}) - ${template.description}`)
   }
 
   lines.push('')
@@ -321,6 +333,14 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
         short: 'r',
         multiple: true,
       },
+      'rules-dir': {
+        type: 'string',
+        short: 'd',
+      },
+      'agents-md-path': {
+        type: 'string',
+        short: 'm',
+      },
     },
     allowPositionals: true,
     strict: false,
@@ -328,6 +348,8 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
   const agent = values.agent as Agent
   const rulesFilter = values.rules as string[] | undefined
+  const customRulesDir = values['rules-dir'] as string | undefined
+  const customAgentsMdPath = values['agents-md-path'] as string | undefined
 
   // Validate agent
   const validAgents: Agent[] = ['claude', 'agents-md']
@@ -354,7 +376,10 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
   // Process each template
   const templates: Record<string, ProcessedTemplate> = {}
   const capabilities = AGENT_CAPABILITIES[agent]
-  const rulesPath = getRulesPath(agent)
+
+  // Use custom paths or defaults
+  const rulesPath = customRulesDir ?? getRulesPath(agent)
+  const agentsMdPath = customAgentsMdPath ?? 'AGENTS.md'
 
   const context: TemplateContext = {
     agent,
@@ -382,6 +407,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
   const output: ScaffoldOutput = {
     agent,
     rulesPath,
+    agentsMdPath,
     format: getOutputFormat(agent),
     supportsAgentsMd: capabilities.supportsAgentsMd,
     templates,
@@ -389,7 +415,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
   // Generate AGENTS.md content for agents-md format
   if (agent === 'agents-md') {
-    output.agentsMdContent = generateAgentsMd(templates)
+    output.agentsMdContent = generateAgentsMd(templates, rulesPath)
   }
 
   console.log(JSON.stringify(output, null, 2))
