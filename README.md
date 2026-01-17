@@ -1,6 +1,6 @@
 # development-skills
 
-[![npm version](https://img.shields.io/npm/v/@plaited/acp-harness.svg)](https://www.npmjs.com/package/@plaited/development-skills)
+[![npm version](https://img.shields.io/npm/v/@plaited/development-skills.svg)](https://www.npmjs.com/package/@plaited/development-skills)
 [![CI](https://github.com/plaited/acp-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/plaited/development-skills/actions/workflows/ci.yml)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 
