@@ -30,4 +30,32 @@ describe('resolveFilePath', () => {
 
     expect(result).toBe(`${process.cwd()}/${invalidPath}`)
   })
+
+  test('resolves implicit relative path (src/foo.ts format) from cwd', async () => {
+    // Paths that look like file paths (contain / and end with extension)
+    // should resolve from cwd without trying Bun.resolve()
+    const implicitRelative = 'src/utils/parser.ts'
+    const result = await resolveFilePath(implicitRelative)
+
+    expect(result).toBe(`${process.cwd()}/${implicitRelative}`)
+  })
+
+  test('resolves various file extensions as implicit relative paths', async () => {
+    const extensions = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'json']
+
+    for (const ext of extensions) {
+      const path = `src/file.${ext}`
+      const result = await resolveFilePath(path)
+      expect(result).toBe(`${process.cwd()}/${path}`)
+    }
+  })
+
+  test('treats bare package names without extensions as package specifiers', async () => {
+    // A path like 'typescript' (no slash, no extension) should try Bun.resolve()
+    const barePkg = 'typescript'
+    const result = await resolveFilePath(barePkg)
+
+    // Should resolve to node_modules, not cwd/typescript
+    expect(result).toContain('node_modules/typescript')
+  })
 })
