@@ -43,9 +43,9 @@ Present available templates from the CLI output and ask which to scaffold. Build
 #### Rule Files
 Write selected rules to `.plaited/rules/` using content from `templates[ruleId].content`.
 
-#### Config Files (Marker-Based Updates)
+#### AGENTS.md (Marker-Based Update)
 
-For CLAUDE.md and AGENTS.md:
+AGENTS.md is the single source of truth for rules content:
 
 1. Read existing file (or empty if missing)
 2. Find markers: `<!-- PLAITED-RULES-START -->` and `<!-- PLAITED-RULES-END -->`
@@ -54,9 +54,17 @@ For CLAUDE.md and AGENTS.md:
    - **No markers**: Append section to end of file
    - **No file**: Create with section content
 
-Write:
-- `claudeMdSection` → CLAUDE.md (uses `@.plaited/rules/` syntax)
-- `agentsMdSection` → AGENTS.md (uses markdown links)
+Write `agentsMdSection` → AGENTS.md
+
+#### CLAUDE.md (Reference Only)
+
+CLAUDE.md only needs a reference to AGENTS.md:
+
+1. Check if CLAUDE.md exists
+2. If exists, scan file content for `@AGENTS.md` text
+   - **Found**: Skip CLAUDE.md (already references AGENTS.md)
+   - **Not found**: Append `claudeMdReference` to end of file
+3. If no file exists: Done (AGENTS.md only is sufficient)
 
 ### Step 5: Output Summary
 

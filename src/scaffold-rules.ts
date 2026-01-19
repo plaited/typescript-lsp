@@ -6,8 +6,8 @@
  * and outputs JSON for agent consumption.
  *
  * All agents use `.plaited/rules/` as the unified default location.
- * The output includes marker-wrapped sections for both CLAUDE.md and AGENTS.md,
- * allowing programmatic updates without destroying user content.
+ * AGENTS.md serves as the single source of truth for rules content,
+ * while CLAUDE.md simply references it via @AGENTS.md syntax.
  *
  * Options:
  * - --rules-dir, -d: Custom rules directory path (overrides default .plaited/rules)
@@ -15,8 +15,8 @@
  * - --list, -l: List available rules without full output
  *
  * Output includes:
- * - claudeMdSection: Marker-wrapped section with @ syntax for CLAUDE.md
  * - agentsMdSection: Marker-wrapped section with markdown links for AGENTS.md
+ * - claudeMdReference: Short reference snippet pointing to @AGENTS.md
  * - templates: Processed rule content for each selected rule
  *
  * Template syntax:
@@ -95,10 +95,10 @@ export type ProcessedTemplate = {
  */
 export type ScaffoldOutput = {
   rulesPath: string
-  /** Marker-wrapped section with @ syntax for CLAUDE.md */
-  claudeMdSection: string
   /** Marker-wrapped section with markdown links for AGENTS.md */
   agentsMdSection: string
+  /** Short reference snippet for CLAUDE.md pointing to AGENTS.md */
+  claudeMdReference: string
   templates: Record<string, ProcessedTemplate>
 }
 
@@ -214,38 +214,34 @@ const processTemplate = (content: string, context: TemplateContext): string => {
 }
 
 /**
- * Generate marker-wrapped section for CLAUDE.md with @ syntax
+ * Generate marker-wrapped reference snippet for CLAUDE.md
  *
  * @remarks
- * Claude Code uses `@path/to/file.md` syntax to reference rule files.
+ * Claude Code uses `@file.md` syntax to include file contents.
+ * This generates a short reference pointing to AGENTS.md as the single source of truth.
  * The markers allow this section to be updated without affecting other content.
  */
-const generateClaudeMdSection = (templates: Record<string, ProcessedTemplate>, rulesPath: string): string => {
+const generateClaudeMdReference = (): string => {
   const lines = [
     MARKERS.start,
     '',
     '## Project Rules',
     '',
-    `This project uses modular development rules stored in \`${rulesPath}/\`.`,
-    'Each rule file covers a specific topic:',
+    'See @AGENTS.md for shared development rules.',
     '',
+    MARKERS.end,
   ]
-
-  for (const [_ruleId, template] of Object.entries(templates)) {
-    lines.push(`- @${rulesPath}/${template.filename} - ${template.description}`)
-  }
-
-  lines.push('')
-  lines.push(MARKERS.end)
 
   return lines.join('\n')
 }
 
 /**
- * Generate marker-wrapped section for AGENTS.md with markdown links
+ * Generate marker-wrapped section for AGENTS.md with dual format
  *
  * @remarks
- * AGENTS.md format uses standard markdown links to reference rule files.
+ * AGENTS.md uses both formats for maximum compatibility:
+ * - `@path` syntax for Claude Code to load file contents
+ * - `[name](path)` markdown links for other tools and GitHub rendering
  * The markers allow this section to be updated without affecting other content.
  */
 const generateAgentsMdSection = (templates: Record<string, ProcessedTemplate>, rulesPath: string): string => {
@@ -260,7 +256,8 @@ const generateAgentsMdSection = (templates: Record<string, ProcessedTemplate>, r
   ]
 
   for (const [ruleId, template] of Object.entries(templates)) {
-    lines.push(`- [${ruleId}](${rulesPath}/${template.filename}) - ${template.description}`)
+    // Dual format: @ syntax for Claude Code, markdown link for other tools
+    lines.push(`- @${rulesPath}/${template.filename} - [${ruleId}](${rulesPath}/${template.filename})`)
   }
 
   lines.push('')
@@ -358,15 +355,15 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
     }
   }
 
-  // Generate marker-wrapped sections for both CLAUDE.md and AGENTS.md
-  const claudeMdSection = generateClaudeMdSection(templates, rulesPath)
+  // Generate marker-wrapped section for AGENTS.md and reference for CLAUDE.md
   const agentsMdSection = generateAgentsMdSection(templates, rulesPath)
+  const claudeMdReference = generateClaudeMdReference()
 
   // Build output
   const output: ScaffoldOutput = {
     rulesPath,
-    claudeMdSection,
     agentsMdSection,
+    claudeMdReference,
     templates,
   }
 
