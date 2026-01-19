@@ -45,6 +45,21 @@ describe('resolveFilePath', () => {
     })
   })
 
+  describe('implicit relative paths', () => {
+    test('resolves src/foo.ts via fallback to cwd', () => {
+      // No ./ prefix, has extension - tries Bun.resolveSync (fails), falls back to cwd
+      const path = 'src/resolve-file-path.ts'
+      const result = resolveFilePath(path)
+      expect(result).toBe(join(process.cwd(), path))
+    })
+
+    test('resolves nested implicit path via fallback', () => {
+      const path = 'src/tests/fixtures/sample.ts'
+      const result = resolveFilePath(path)
+      expect(result).toBe(join(process.cwd(), path))
+    })
+  })
+
   describe('bare package specifiers', () => {
     test('resolves bare package name', () => {
       const result = resolveFilePath('typescript')
