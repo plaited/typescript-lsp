@@ -293,7 +293,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
   const listOnly = values.list as boolean | undefined
 
   // Get bundled templates directory
-  const packageRulesDir = join(import.meta.dir, '../.claude/rules')
+  const packageRulesDir = join(import.meta.dir, '../.plaited/rules')
 
   // Read template files
   const templateFiles = await readdir(packageRulesDir)

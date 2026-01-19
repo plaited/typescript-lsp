@@ -80,6 +80,19 @@ bunx @plaited/development-skills scaffold-rules --rules-dir=custom/rules
 
 **Note:** Invalid rule names in `--rules` will produce a warning with available rule IDs.
 
+## Rules Directory Convention
+
+| Directory | Purpose | Scope |
+|-----------|---------|-------|
+| `.plaited/rules/` | Shared rules from scaffold-rules | Cross-agent (Claude, Cursor, Copilot, etc.) |
+| `.claude/rules/` | Claude Code-specific overrides | Claude Code only |
+| `.cursor/rules/` | Cursor-specific overrides | Cursor only |
+
+**How it works:**
+- `.plaited/rules/` contains shared rules - referenced by both CLAUDE.md and AGENTS.md
+- Agent-specific directories can override or extend shared rules for that agent only
+- When scaffolding, always write to `.plaited/rules/` unless user specifies `--rules-dir`
+
 ## Related Skills
 
 - **validate-skill** - Validate skill directories against AgentSkills spec

@@ -28,17 +28,30 @@ bun run check:write
 bun test
 ```
 
-## Project Organization
+## Project Rules
 
-This project uses `.claude/rules/` for project-specific guidance:
+This project uses `.plaited/rules/` for shared development rules:
 
-- **Testing**: @.claude/rules/testing.md - Test commands and workflow
-- **Code Review**: @.claude/rules/code-review.md - Review standards
-- **Accuracy**: @.claude/rules/accuracy.md - Confidence thresholds
-- **Bun APIs**: @.claude/rules/bun-apis.md - Bun platform API preferences
-- **Git Workflow**: @.claude/rules/git-workflow.md - Commit conventions
-- **GitHub**: @.claude/rules/github.md - GitHub CLI integration
-- **Module Organization**: @.claude/rules/module-organization.md - No index files, explicit imports
+- **Testing**: @.plaited/rules/testing.md - Test commands and workflow
+- **Code Review**: @.plaited/rules/code-review.md - Review standards
+- **Accuracy**: @.plaited/rules/accuracy.md - Confidence thresholds
+- **Bun APIs**: @.plaited/rules/bun-apis.md - Bun platform API preferences
+- **Git Workflow**: @.plaited/rules/git-workflow.md - Commit conventions
+- **GitHub**: @.plaited/rules/github.md - GitHub CLI integration
+- **Module Organization**: @.plaited/rules/module-organization.md - No index files, explicit imports
+
+### Rules Directory Convention
+
+| Directory | Purpose | Scope |
+|-----------|---------|-------|
+| `.plaited/rules/` | Shared rules from scaffold-rules | Cross-agent (Claude, Cursor, Copilot, etc.) |
+| `.claude/rules/` | Claude Code-specific overrides | Claude Code only |
+| `.cursor/rules/` | Cursor-specific overrides | Cursor only |
+
+**How it works:**
+- `.plaited/rules/` contains rules scaffolded via `scaffold-rules` skill - shared across all agents
+- Agent-specific directories (`.claude/rules/`, `.cursor/rules/`) can override or extend shared rules
+- Both CLAUDE.md and AGENTS.md reference `.plaited/rules/` for consistency
 
 ## Quick Reference
 
@@ -66,7 +79,7 @@ This repository provides the **@plaited/development-skills** package with the fo
 - Object parameters for functions with 2+ parameters
 - JSON imports require `with { type: 'json' }` attribute
 
-For complete conventions, see `.claude/rules/code-review.md`
+For complete conventions, see `.plaited/rules/code-review.md`
 
 ### Package Structure
 
@@ -82,7 +95,7 @@ This project has dual distribution (CLI + AI agent skills):
 - `.claude/skills/code-documentation/` - Code documentation skill
 - `.claude/skills/validate-skill/` - Skill validation skill
 - `.claude/skills/scaffold-rules/` - Scaffold development rules skill
-- `.claude/rules/` - Development guidance (not published)
+- `.plaited/rules/` - Shared development rules (bundled with CLI)
 
 **Distribution:**
 - CLI: Published to npm, usable via `bunx @plaited/development-skills`

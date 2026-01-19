@@ -107,10 +107,10 @@ describe('scaffold-rules', () => {
 
   test('handles missing bundled rules directory gracefully', async () => {
     // This test ensures the script fails gracefully if templates are missing
-    // In production, .claude/rules/ should always be bundled with the package
+    // In production, .plaited/rules/ should always be bundled with the package
     const result = await $`bun ${binDir}/cli.ts scaffold-rules`.nothrow().quiet()
 
-    // Should succeed because .claude/rules/ exists in development
+    // Should succeed because .plaited/rules/ exists in development
     expect(result.exitCode).toBe(0)
   })
 
