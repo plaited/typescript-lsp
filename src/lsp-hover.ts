@@ -38,7 +38,7 @@ export const lspHover = async (args: string[]) => {
     process.exit(1)
   }
 
-  const absolutePath = await resolveFilePath(filePath)
+  const absolutePath = resolveFilePath(filePath)
   const uri = `file://${absolutePath}`
   const rootUri = `file://${process.cwd()}`
 

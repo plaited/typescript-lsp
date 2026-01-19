@@ -1,52 +1,72 @@
 import { join } from 'node:path'
 
 /**
- * Check if a path looks like a file path (vs a package specifier)
+ * Check if a path is a package specifier (not a file path)
  *
  * @remarks
- * File paths typically contain a `/` and end with a file extension.
- * Package specifiers are bare like `lodash` or scoped like `@org/pkg`.
- * Scoped packages starting with `@` are excluded even if they have extensions.
+ * Package specifiers include:
+ * - Scoped packages: `@org/pkg`, `@org/pkg/subpath.js`
+ * - Bare imports: `lodash`, `lodash/fp`
+ *
+ * File paths start with `/`, `./`, or `../`
  */
-const looksLikeFilePath = (path: string): boolean => {
-  // Scoped packages like @org/pkg/file.ts should use Bun.resolve()
-  if (path.startsWith('@')) return false
-  // Contains a slash and ends with a common source file extension
-  return path.includes('/') && /\.(tsx?|jsx?|mjs|cjs|json)$/.test(path)
+const isPackageSpecifier = (path: string): boolean => {
+  // Scoped packages always start with @
+  if (path.startsWith('@')) return true
+  // File paths start with / or .
+  if (path.startsWith('/') || path.startsWith('.')) return false
+  // Bare imports don't start with / or . (e.g., "lodash", "lodash/fp")
+  return true
 }
+
+/**
+ * Check if a path has a source file extension
+ */
+const hasSourceExtension = (path: string): boolean => /\.(tsx?|jsx?|mjs|cjs|json)$/.test(path)
 
 /**
  * Resolve a file path to an absolute path
  *
  * @remarks
- * Handles three types of paths:
- * - Absolute paths (starting with `/`) - returned as-is
- * - Relative paths (starting with `.` or looking like `src/foo.ts`) - resolved from cwd
- * - Package export paths (e.g., `plaited/workshop/get-paths.ts`) - resolved via Bun.resolve()
+ * Resolution order:
+ * 1. Absolute paths (starting with `/`) - returned as-is
+ * 2. Package specifiers (`@org/pkg`, `lodash/fp`) - resolved via Bun.resolveSync()
+ * 3. Relative paths with extensions (`./foo.ts`) - resolved from cwd
+ * 4. Relative paths without extensions (`./testing`) - try Bun.resolveSync() for exports field
+ * 5. Fallback to joining with cwd
+ *
+ * This allows paths like `./testing` to resolve via package.json exports:
+ * `"./testing": "./src/testing.ts"` → resolves to `./src/testing.ts`
  */
-export const resolveFilePath = async (filePath: string): Promise<string> => {
+export const resolveFilePath = (filePath: string): string => {
   const cwd = process.cwd()
 
-  // Absolute path
+  // Absolute path - return as-is
   if (filePath.startsWith('/')) {
     return filePath
   }
 
-  // Explicit relative path from cwd (starts with . or ..)
-  if (filePath.startsWith('.')) {
+  // Package specifier - always use Bun.resolveSync()
+  if (isPackageSpecifier(filePath)) {
+    try {
+      return Bun.resolveSync(filePath, cwd)
+    } catch {
+      // Fall back to joining with cwd for bare paths like "src/foo.ts"
+      return join(cwd, filePath)
+    }
+  }
+
+  // Relative path with extension - resolve directly from cwd
+  if (hasSourceExtension(filePath)) {
     return join(cwd, filePath)
   }
 
-  // Implicit relative path (looks like a file path, e.g., src/utils/foo.ts)
-  if (looksLikeFilePath(filePath)) {
-    return join(cwd, filePath)
-  }
-
-  // Try package export path resolution
+  // Relative path without extension - try Bun.resolveSync() for exports field resolution
+  // This handles cases like "./testing" → "./src/testing.ts" via package.json exports
   try {
-    return await Bun.resolve(filePath, cwd)
+    return Bun.resolveSync(filePath, cwd)
   } catch {
-    // Fall back to relative path from cwd
+    // Fall back to joining with cwd
     return join(cwd, filePath)
   }
 }

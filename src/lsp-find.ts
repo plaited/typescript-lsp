@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 /**
- * Search for symbols across the workspace by name
+ * Search for TypeScript symbols across the workspace by name
  *
- * Usage: bun lsp-find.ts <query> [file]
+ * Usage: bun lsp-find.ts <query> <context-file>
  */
 
 import { parseArgs } from 'node:util'
@@ -10,25 +10,9 @@ import { LspClient } from './lsp-client.ts'
 import { resolveFilePath } from './resolve-file-path.ts'
 
 /**
- * Find a default context file when none is provided
+ * Search for TypeScript symbols across the workspace by name
  *
- * @remarks
- * Checks common TypeScript entry points in order of preference
- */
-const findDefaultContextFile = async (): Promise<string | null> => {
-  const candidates = [`${process.cwd()}/src/index.ts`, `${process.cwd()}/src/main.ts`, `${process.cwd()}/index.ts`]
-  for (const candidate of candidates) {
-    if (await Bun.file(candidate).exists()) {
-      return candidate
-    }
-  }
-  return null
-}
-
-/**
- * Search for symbols across the workspace by name
- *
- * @param args - Command line arguments [query, file?]
+ * @param args - Command line arguments [query, context-file]
  */
 export const lspFind = async (args: string[]) => {
   const { positionals } = parseArgs({
@@ -38,10 +22,15 @@ export const lspFind = async (args: string[]) => {
 
   const [query, filePath] = positionals
 
-  if (!query) {
-    console.error('Usage: lsp-find <query> [file]')
-    console.error('  query: Symbol name or partial name to search')
-    console.error('  file: Optional file to open for project context')
+  if (!query || !filePath) {
+    console.error('Error: context-file required')
+    console.error('')
+    console.error('lsp-find searches TypeScript SYMBOLS (functions, types, classes).')
+    console.error('  - Use Glob to find files by pattern')
+    console.error('  - Use Grep to search text content')
+    console.error('  - Use lsp-find <query> <context-file> for symbol search')
+    console.error('')
+    console.error('Provide any .ts file as context-file (e.g., src/app.ts)')
     process.exit(1)
   }
 
@@ -51,15 +40,7 @@ export const lspFind = async (args: string[]) => {
   try {
     await client.start()
 
-    // Open a file to establish project context if provided, otherwise find a default
-    const contextFile = filePath ? await resolveFilePath(filePath) : await findDefaultContextFile()
-
-    if (!contextFile) {
-      console.error('Error: No context file found.')
-      console.error('Provide a file path or ensure src/index.ts, src/main.ts, or index.ts exists.')
-      await client.stop()
-      process.exit(1)
-    }
+    const contextFile = resolveFilePath(filePath)
 
     const file = Bun.file(contextFile)
     if (!(await file.exists())) {
