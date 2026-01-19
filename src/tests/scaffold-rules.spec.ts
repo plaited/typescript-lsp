@@ -271,4 +271,46 @@ describe('scaffold-rules', () => {
       expect(result.stderr.toString()).toContain('testing')
     })
   })
+
+  describe('edge cases', () => {
+    test('handles all rules filtered out gracefully', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules nonexistent`.nothrow().json()
+
+      // Should return valid output with empty templates
+      expect(result.templates).toEqual({})
+      expect(result.claudeMdSection).toContain('<!-- PLAITED-RULES-START -->')
+      expect(result.claudeMdSection).toContain('<!-- PLAITED-RULES-END -->')
+    })
+
+    test('description extraction falls back for heading-only content', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      // All templates should have non-empty descriptions
+      for (const template of Object.values(result.templates)) {
+        expect(template.description).toBeTruthy()
+        expect(template.description.length).toBeGreaterThan(0)
+      }
+    })
+
+    test('processes nested conditionals correctly', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules accuracy`.json()
+
+      const accuracy = result.templates.accuracy
+      expect(accuracy).toBeDefined()
+
+      // Should not contain any unprocessed conditional syntax
+      expect(accuracy!.content).not.toContain('{{#if')
+      expect(accuracy!.content).not.toContain('{{^if')
+      expect(accuracy!.content).not.toContain('{{/if}}')
+    })
+
+    test('template content has no excessive blank lines', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      for (const template of Object.values(result.templates)) {
+        // Should not have 3+ consecutive newlines
+        expect(template.content).not.toMatch(/\n{3,}/)
+      }
+    })
+  })
 })

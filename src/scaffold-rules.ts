@@ -51,6 +51,14 @@ import { parseArgs } from 'node:util'
  * @remarks
  * These markers allow scaffold-rules to update CLAUDE.md and AGENTS.md
  * without destroying user content outside the marked section.
+ *
+ * Use these markers to implement idempotent updates:
+ * 1. Find existing markers in file content
+ * 2. Replace content between markers (inclusive) with new section
+ * 3. If no markers exist, append section to end of file
+ *
+ * @property start - Opening marker to place before rules section
+ * @property end - Closing marker to place after rules section
  */
 export const MARKERS = {
   start: '<!-- PLAITED-RULES-START -->',
@@ -104,10 +112,13 @@ export type ScaffoldOutput = {
 const processConditionals = (content: string): string => {
   let result = content
   let previousResult = ''
+  const maxIterations = 100
+  let iterations = 0
 
   // Process iteratively until no more changes (handles nested conditionals)
-  while (result !== previousResult) {
+  while (result !== previousResult && iterations < maxIterations) {
     previousResult = result
+    iterations++
 
     // Process positive conditionals {{#if development-skills}}...{{/if}}
     // Always true - include the block content
@@ -164,7 +175,8 @@ const extractDescription = (content: string): string => {
   let description = ''
 
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i]?.trim()
+    // Non-null assertion safe: loop condition guarantees i < lines.length
+    const line = lines[i]!.trim()
     if (line && !line.startsWith('#') && !line.startsWith('**')) {
       description = line
       break
