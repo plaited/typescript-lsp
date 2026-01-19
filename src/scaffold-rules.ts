@@ -12,6 +12,7 @@
  * Options:
  * - --rules-dir, -d: Custom rules directory path (overrides default .plaited/rules)
  * - --rules, -r: Filter to specific rules (can be used multiple times)
+ * - --list, -l: List available rules without full output
  *
  * Output includes:
  * - claudeMdSection: Marker-wrapped section with @ syntax for CLAUDE.md
@@ -34,6 +35,9 @@
  *
  * # Filter specific rules
  * bunx @plaited/development-skills scaffold-rules --rules testing --rules bun-apis
+ *
+ * # List available rules
+ * bunx @plaited/development-skills scaffold-rules --list
  * ```
  */
 
@@ -48,7 +52,7 @@ import { parseArgs } from 'node:util'
  * These markers allow scaffold-rules to update CLAUDE.md and AGENTS.md
  * without destroying user content outside the marked section.
  */
-const MARKERS = {
+export const MARKERS = {
   start: '<!-- PLAITED-RULES-START -->',
   end: '<!-- PLAITED-RULES-END -->',
 } as const
@@ -67,13 +71,19 @@ type TemplateContext = {
   rulesPath: string
 }
 
-type ProcessedTemplate = {
+/**
+ * Processed template with filename, content, and description
+ */
+export type ProcessedTemplate = {
   filename: string
   content: string
   description: string
 }
 
-type ScaffoldOutput = {
+/**
+ * Output from scaffold-rules CLI
+ */
+export type ScaffoldOutput = {
   rulesPath: string
   /** Marker-wrapped section with @ syntax for CLAUDE.md */
   claudeMdSection: string
@@ -257,6 +267,10 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
         type: 'string',
         short: 'd',
       },
+      list: {
+        type: 'boolean',
+        short: 'l',
+      },
     },
     allowPositionals: true,
     strict: false,
@@ -264,6 +278,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
   const rulesFilter = values.rules as string[] | undefined
   const customRulesDir = values['rules-dir'] as string | undefined
+  const listOnly = values.list as boolean | undefined
 
   // Get bundled templates directory
   const packageRulesDir = join(import.meta.dir, '../.claude/rules')
@@ -273,6 +288,23 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
   // Filter to .md files
   const mdFiles = templateFiles.filter((f) => f.endsWith('.md'))
+  const availableRuleIds = mdFiles.map((f) => f.replace('.md', ''))
+
+  // Validate requested rules exist
+  if (rulesFilter) {
+    const invalidRules = rulesFilter.filter((r) => !availableRuleIds.includes(r))
+    if (invalidRules.length > 0) {
+      console.error(`Warning: Unknown rules: ${invalidRules.join(', ')}`)
+      console.error(`Available rules: ${availableRuleIds.join(', ')}`)
+    }
+  }
+
+  // Handle --list flag: output available rules and exit
+  if (listOnly) {
+    const listOutput = availableRuleIds.map((id) => ({ id, filename: `${id}.md` }))
+    console.log(JSON.stringify(listOutput, null, 2))
+    return
+  }
 
   // Filter if specific rules requested
   const rulesToProcess = rulesFilter ? mdFiles.filter((f) => rulesFilter.includes(f.replace('.md', ''))) : mdFiles

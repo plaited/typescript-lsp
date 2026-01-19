@@ -68,12 +68,17 @@ Report what was created/updated.
 # All rules to .plaited/rules/
 bunx @plaited/development-skills scaffold-rules
 
+# List available rules (useful for discovery)
+bunx @plaited/development-skills scaffold-rules --list
+
 # Filter specific rules
 bunx @plaited/development-skills scaffold-rules --rules <id> --rules <id>
 
 # Custom directory
 bunx @plaited/development-skills scaffold-rules --rules-dir=custom/rules
 ```
+
+**Note:** Invalid rule names in `--rules` will produce a warning with available rule IDs.
 
 ## Related Skills
 

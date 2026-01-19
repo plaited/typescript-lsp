@@ -38,6 +38,7 @@ This project uses `.claude/rules/` for project-specific guidance:
 - **Bun APIs**: @.claude/rules/bun-apis.md - Bun platform API preferences
 - **Git Workflow**: @.claude/rules/git-workflow.md - Commit conventions
 - **GitHub**: @.claude/rules/github.md - GitHub CLI integration
+- **Module Organization**: @.claude/rules/module-organization.md - No index files, explicit imports
 
 ## Quick Reference
 

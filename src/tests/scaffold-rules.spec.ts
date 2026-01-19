@@ -222,4 +222,53 @@ describe('scaffold-rules', () => {
       expect(result.rulesPath).toBe('custom/rules')
     })
   })
+
+  describe('--list flag', () => {
+    test('outputs array of available rules', async () => {
+      const result = await $`bun ${binDir}/cli.ts scaffold-rules --list`.json()
+
+      expect(result).toBeArray()
+      expect(result.length).toBeGreaterThan(0)
+
+      // Each entry should have id and filename
+      for (const rule of result) {
+        expect(rule).toHaveProperty('id')
+        expect(rule).toHaveProperty('filename')
+        expect(rule.filename).toBe(`${rule.id}.md`)
+      }
+    })
+
+    test('includes expected rules', async () => {
+      const result = await $`bun ${binDir}/cli.ts scaffold-rules --list`.json()
+      const ids = result.map((r: { id: string }) => r.id)
+
+      expect(ids).toContain('accuracy')
+      expect(ids).toContain('testing')
+      expect(ids).toContain('bun-apis')
+    })
+
+    test('short flag -l works', async () => {
+      const result = await $`bun ${binDir}/cli.ts scaffold-rules -l`.json()
+
+      expect(result).toBeArray()
+      expect(result.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('--rules validation', () => {
+    test('warns about unknown rules', async () => {
+      const result = await $`bun ${binDir}/cli.ts scaffold-rules --rules nonexistent --rules testing`.nothrow()
+
+      // Should still succeed but with warning
+      expect(result.exitCode).toBe(0)
+      expect(result.stderr.toString()).toContain('Warning: Unknown rules: nonexistent')
+    })
+
+    test('shows available rules in warning', async () => {
+      const result = await $`bun ${binDir}/cli.ts scaffold-rules --rules fake-rule`.nothrow()
+
+      expect(result.stderr.toString()).toContain('Available rules:')
+      expect(result.stderr.toString()).toContain('testing')
+    })
+  })
 })

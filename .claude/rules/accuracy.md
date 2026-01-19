@@ -1,5 +1,5 @@
 <!--
-RULE TEMPLATE - Distributed via /scaffold-rules
+RULE TEMPLATE - Distributed via scaffold-rules skill
 Variables: {{LINK:testing}}, {{#if development-skills}}
 -->
 
