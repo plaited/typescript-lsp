@@ -66,6 +66,13 @@ Bun test runner conventions:
 - No conditionals around assertions
 - Assert existence before checking values
 
+### Module Organization
+Import/export patterns for Bun/TypeScript projects:
+- No `index.ts` files—use named re-export files matching folder names
+- Single feature packages expose the feature file directly as main
+- Explicit `.ts` extensions in all imports
+- Flat re-export structure: `src/acp.ts` re-exports from `src/acp/`
+
 ## Merge Behavior
 
 **Always scans existing rules first.** When existing rules are found:
