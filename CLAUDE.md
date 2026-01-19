@@ -45,17 +45,17 @@ This project uses `.claude/rules/` for project-specific guidance:
 
 This repository provides the **@plaited/development-skills** package with the following capabilities:
 
-**TypeScript LSP** (`/lsp-*` commands):
-- `/lsp-hover` - Get type information at a position
-- `/lsp-find` - Search for symbols across workspace
-- `/lsp-refs` - Find all references to a symbol
-- `/lsp-analyze` - Batch analysis of a file
+**TypeScript LSP** (`lsp-*` commands):
+- `lsp-hover` - Get type information at a position
+- `lsp-find` - Search for symbols across workspace
+- `lsp-refs` - Find all references to a symbol
+- `lsp-analyze` - Batch analysis of a file
 
 **Code Documentation** - Documentation generation utilities
 
-**Skill Validation** (`/validate-skill`) - Validate skills against AgentSkills spec
+**Skill Validation** (`validate-skill`) - Validate skills against AgentSkills spec
 
-**Scaffold Rules** (`/scaffold-rules`) - Scaffold development rules for AI coding agents
+**Scaffold Rules** (`scaffold-rules`) - Scaffold development rules for AI coding agents
 
 ### Code Style Essentials
 
@@ -81,7 +81,6 @@ This project has dual distribution (CLI + AI agent skills):
 - `.claude/skills/code-documentation/` - Code documentation skill
 - `.claude/skills/validate-skill/` - Skill validation skill
 - `.claude/skills/scaffold-rules/` - Scaffold development rules skill
-- `.claude/commands/` - Slash command definitions (use CLI under the hood)
 - `.claude/rules/` - Development guidance (not published)
 
 **Distribution:**
@@ -90,8 +89,7 @@ This project has dual distribution (CLI + AI agent skills):
 
 When working on the package:
 - Test CLI: `bun bin/cli.ts <command>`
-- Test skills: Commands in `.claude/commands/*.md` call the CLI
-- All skills use the CLI tools, not local scripts
+- All skills use the CLI tools under the hood
 
 ### Documentation
 
@@ -120,12 +118,16 @@ The **@plaited/development-skills** CLI provides:
 **Skill Validation** (`validate-skill` command):
 - Validate skills against AgentSkills spec
 
+**Scaffold Rules** (`scaffold-rules` command):
+- Scaffold development rules for AI coding agents
+
 **Usage:**
 ```bash
 # Direct CLI usage
 bunx @plaited/development-skills lsp-hover src/app.ts 25 10
 bunx @plaited/development-skills lsp-find UserConfig
 bunx @plaited/development-skills validate-skill .claude/skills
+bunx @plaited/development-skills scaffold-rules
 
 # Or install globally
 bun add -g @plaited/development-skills

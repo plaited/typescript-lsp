@@ -1,49 +1,19 @@
 <!--
 RULE TEMPLATE - Distributed via /scaffold-rules
-Variables: {{#if has-sandbox}}, {{#if supports-slash-commands}}
+Variables: {{LINK:*}}
 -->
 
 # Git Workflow
 
 ## Commit Message Format
 
-{{#if has-sandbox}}
-When creating commits with multi-line messages, use single-quoted strings instead of heredocs. The sandbox environment restricts temp file creation needed for heredocs.
-{{/if}}
-{{^if has-sandbox}}
 Use multi-line commit messages for detailed changes:
-{{/if}}
 
-{{#if has-sandbox}}
-```bash
-# ✅ CORRECT: Single-quoted multi-line string
-git commit -m 'refactor: description here
-
-Additional context on second line.
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>'
-
-# ❌ WRONG: Heredoc syntax (fails in sandbox)
-git commit -m "$(cat <<'EOF'
-refactor: description here
-EOF
-)"
-```
-
-The heredoc approach fails with:
-```
-(eval):1: can't create temp file for here document: operation not permitted
-```
-{{/if}}
-{{^if has-sandbox}}
 ```bash
 git commit -m "refactor: description here
 
 Additional context on second line."
 ```
-{{/if}}
 
 ## Pre-commit Hooks
 

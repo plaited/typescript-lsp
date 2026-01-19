@@ -9,12 +9,9 @@ type Template = {
 }
 
 type ScaffoldOutput = {
-  agent: string
   rulesPath: string
-  agentsMdPath: string
-  format: 'multi-file' | 'agents-md'
-  supportsAgentsMd: boolean
-  agentsMdContent?: string
+  claudeMdSection: string
+  agentsMdSection: string
   templates: Record<string, Template>
 }
 
@@ -22,7 +19,7 @@ const binDir = join(import.meta.dir, '../../bin')
 
 describe('scaffold-rules', () => {
   test('outputs JSON with all templates', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --format=json`.json()
+    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
     expect(result).toHaveProperty('templates')
     expect(result.templates).toBeObject()
@@ -35,10 +32,11 @@ describe('scaffold-rules', () => {
     expect(templateKeys).toContain('git-workflow')
     expect(templateKeys).toContain('github')
     expect(templateKeys).toContain('testing')
+    expect(templateKeys).toContain('module-organization')
   })
 
   test('each template has required properties', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --format=json`.json()
+    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
     for (const [ruleId, template] of Object.entries(result.templates)) {
       expect(template).toHaveProperty('filename')
@@ -52,7 +50,7 @@ describe('scaffold-rules', () => {
   })
 
   test('removes template headers from content', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --format=json`.json()
+    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
     // Check that template headers are removed
     for (const template of Object.values(result.templates)) {
@@ -62,7 +60,7 @@ describe('scaffold-rules', () => {
   })
 
   test('processes development-skills conditionals', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --format=json`.json()
+    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
     const accuracy = result.templates.accuracy
     expect(accuracy).toBeDefined()
@@ -78,8 +76,7 @@ describe('scaffold-rules', () => {
   })
 
   test('filters to specific rules when requested', async () => {
-    const result: ScaffoldOutput =
-      await $`bun ${binDir}/cli.ts scaffold-rules --rules testing --rules bun-apis --format=json`.json()
+    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules testing --rules bun-apis`.json()
 
     const templateKeys = Object.keys(result.templates)
 
@@ -94,7 +91,7 @@ describe('scaffold-rules', () => {
   })
 
   test('extracts meaningful descriptions', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --format=json`.json()
+    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
     // Check a few descriptions
     const accuracy = result.templates.accuracy
@@ -108,179 +105,121 @@ describe('scaffold-rules', () => {
     expect(testing!.description.length).toBeGreaterThan(10)
   })
 
-  test('exits with error for invalid agent', async () => {
-    const proc = Bun.spawn(['bun', `${binDir}/cli.ts`, 'scaffold-rules', '--agent=invalid'], {
-      stderr: 'pipe',
-    })
-
-    const exitCode = await proc.exited
-    expect(exitCode).not.toBe(0)
-  })
-
   test('handles missing bundled rules directory gracefully', async () => {
     // This test ensures the script fails gracefully if templates are missing
     // In production, .claude/rules/ should always be bundled with the package
-    const result = await $`bun ${binDir}/cli.ts scaffold-rules --format=json`.nothrow().quiet()
+    const result = await $`bun ${binDir}/cli.ts scaffold-rules`.nothrow().quiet()
 
     // Should succeed because .claude/rules/ exists in development
     expect(result.exitCode).toBe(0)
   })
 
-  describe('Claude Code target', () => {
-    test('defaults to Claude Code format', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --format=json`.json()
+  describe('output structure', () => {
+    test('defaults to .plaited/rules path', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
-      expect(result.agent).toBe('claude')
-      expect(result.rulesPath).toBe('.claude/rules')
-      expect(result.format).toBe('multi-file')
-      expect(result.supportsAgentsMd).toBe(false)
-    })
-
-    test('processes has-sandbox for Claude (sandbox environment)', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=claude --format=json`.json()
-
-      const gitWorkflow = result.templates['git-workflow']
-      expect(gitWorkflow).toBeDefined()
-
-      // Claude has sandbox - should include sandbox-specific content
-      expect(gitWorkflow!.content).toContain('sandbox environment')
-      expect(gitWorkflow!.content).toContain('single-quoted strings')
-
-      // Should not have conditional syntax
-      expect(gitWorkflow!.content).not.toContain('{{#if has-sandbox}}')
-      expect(gitWorkflow!.content).not.toContain('{{/if}}')
-    })
-
-    test('processes supports-slash-commands for Claude', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=claude --format=json`.json()
-
-      const accuracy = result.templates.accuracy
-      expect(accuracy).toBeDefined()
-
-      // Claude supports slash commands
-      expect(accuracy!.content).toContain('/lsp-hover')
-      expect(accuracy!.content).toContain('/lsp-find')
-    })
-
-    test('generates Claude-style cross-references', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=claude --format=json`.json()
-
-      const accuracy = result.templates.accuracy
-      expect(accuracy).toBeDefined()
-      expect(accuracy!.content).toContain('@.claude/rules/testing.md')
-      expect(accuracy!.content).not.toContain('{{LINK:testing}}')
-    })
-  })
-
-  describe('AGENTS.md target (universal format)', () => {
-    test('supports agents-md format', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --format=json`.json()
-
-      expect(result.agent).toBe('agents-md')
       expect(result.rulesPath).toBe('.plaited/rules')
-      expect(result.format).toBe('agents-md')
-      expect(result.supportsAgentsMd).toBe(true)
     })
 
-    test('generates AGENTS.md content', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --format=json`.json()
+    test('includes claudeMdSection with markers and @ syntax', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
-      expect(result.agentsMdContent).toBeDefined()
-      expect(result.agentsMdContent).toContain('# AGENTS.md')
-      expect(result.agentsMdContent).toContain('.plaited/rules/')
-      expect(result.agentsMdContent).toContain('## Rules')
+      expect(result.claudeMdSection).toContain('<!-- PLAITED-RULES-START -->')
+      expect(result.claudeMdSection).toContain('<!-- PLAITED-RULES-END -->')
+      expect(result.claudeMdSection).toContain('@.plaited/rules/')
+      expect(result.claudeMdSection).toContain('## Project Rules')
     })
 
-    test('AGENTS.md links to all rule files', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --format=json`.json()
+    test('includes agentsMdSection with markers and markdown links', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
-      const agentsMd = result.agentsMdContent ?? ''
+      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-START -->')
+      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-END -->')
+      expect(result.agentsMdSection).toContain('[')
+      expect(result.agentsMdSection).toContain('](.plaited/rules/')
+      expect(result.agentsMdSection).toContain('## Rules')
+    })
 
-      // Should link to each rule file
-      for (const [ruleId, template] of Object.entries(result.templates)) {
-        expect(agentsMd).toContain(`[${ruleId}](.plaited/rules/${template.filename})`)
+    test('claudeMdSection lists all selected rules', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      for (const template of Object.values(result.templates)) {
+        expect(result.claudeMdSection).toContain(`@.plaited/rules/${template.filename}`)
       }
     })
 
-    test('agents-md has no sandbox (uses standard commit format)', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --format=json`.json()
+    test('agentsMdSection lists all selected rules', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      for (const [ruleId, template] of Object.entries(result.templates)) {
+        expect(result.agentsMdSection).toContain(`[${ruleId}](.plaited/rules/${template.filename})`)
+      }
+    })
+  })
+
+  describe('template content', () => {
+    test('git-workflow uses standard commit format', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
       const gitWorkflow = result.templates['git-workflow']
       expect(gitWorkflow).toBeDefined()
-      expect(gitWorkflow!.content).not.toContain('sandbox environment')
       expect(gitWorkflow!.content).toContain('multi-line commit')
+      expect(gitWorkflow!.content).toContain('git commit -m')
     })
 
-    test('agents-md uses CLI syntax (no slash commands)', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --format=json`.json()
+    test('accuracy uses CLI syntax for LSP tools', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
       const accuracy = result.templates.accuracy
       expect(accuracy).toBeDefined()
 
-      // Should use CLI instead of slash commands
+      // Should use CLI syntax
       expect(accuracy!.content).toContain('bunx @plaited/development-skills lsp-')
-      expect(accuracy!.content).not.toContain('/lsp-hover')
     })
 
-    test('generates agents-md-style cross-references', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --format=json`.json()
+    test('cross-references use path syntax', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
       const accuracy = result.templates.accuracy
       expect(accuracy).toBeDefined()
       expect(accuracy!.content).toContain('.plaited/rules/testing.md')
+      expect(accuracy!.content).not.toContain('{{LINK:testing}}')
     })
   })
 
   describe('path customization', () => {
-    test('includes default agentsMdPath in output', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --format=json`.json()
-
-      expect(result.agentsMdPath).toBe('AGENTS.md')
-    })
-
     test('--rules-dir overrides default rules path', async () => {
-      const result: ScaffoldOutput =
-        await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --rules-dir=.cursor/rules --format=json`.json()
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
 
       expect(result.rulesPath).toBe('.cursor/rules')
-      // AGENTS.md content should use custom path
-      expect(result.agentsMdContent).toContain('.cursor/rules/')
-      expect(result.agentsMdContent).not.toContain('.plaited/rules/')
     })
 
-    test('--agents-md-path overrides default AGENTS.md location', async () => {
-      const result: ScaffoldOutput =
-        await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --agents-md-path=docs/AGENTS.md --format=json`.json()
+    test('claudeMdSection uses custom path', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
 
-      expect(result.agentsMdPath).toBe('docs/AGENTS.md')
+      expect(result.claudeMdSection).toContain('@.cursor/rules/')
+      expect(result.claudeMdSection).not.toContain('.plaited/rules/')
+    })
+
+    test('agentsMdSection uses custom path', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
+
+      expect(result.agentsMdSection).toContain('.cursor/rules/')
+      expect(result.agentsMdSection).not.toContain('.plaited/rules/')
     })
 
     test('cross-references use custom rules-dir', async () => {
-      const result: ScaffoldOutput =
-        await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md --rules-dir=.factory/rules --format=json`.json()
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.factory/rules`.json()
 
       const accuracy = result.templates.accuracy
       expect(accuracy).toBeDefined()
       expect(accuracy!.content).toContain('.factory/rules/testing.md')
     })
 
-    test('short flags work (-d and -m)', async () => {
-      const result: ScaffoldOutput =
-        await $`bun ${binDir}/cli.ts scaffold-rules --agent=agents-md -d custom/rules -m custom/AGENTS.md --format=json`.json()
+    test('short flag -d works', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules -d custom/rules`.json()
 
       expect(result.rulesPath).toBe('custom/rules')
-      expect(result.agentsMdPath).toBe('custom/AGENTS.md')
-    })
-
-    test('claude agent also respects --rules-dir', async () => {
-      const result: ScaffoldOutput =
-        await $`bun ${binDir}/cli.ts scaffold-rules --agent=claude --rules-dir=.my-rules --format=json`.json()
-
-      expect(result.rulesPath).toBe('.my-rules')
-      // Cross-references should use custom path
-      const accuracy = result.templates.accuracy
-      expect(accuracy).toBeDefined()
-      expect(accuracy!.content).toContain('@.my-rules/testing.md')
     })
   })
 })

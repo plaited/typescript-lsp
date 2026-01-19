@@ -1,6 +1,6 @@
 <!--
 RULE TEMPLATE - Distributed via /scaffold-rules
-Variables: {{LINK:testing}}, {{#if development-skills}}, {{#if supports-slash-commands}}
+Variables: {{LINK:testing}}, {{#if development-skills}}
 -->
 
 # Accuracy and Confidence Standards
@@ -19,7 +19,7 @@ Variables: {{LINK:testing}}, {{#if development-skills}}, {{#if supports-slash-co
 {{#if development-skills}}
    - **For TypeScript/JavaScript projects**: When @plaited/development-skills is installed, prefer LSP tools for type-aware verification:
      - Use `lsp-find` to search for symbols, types, and patterns across the workspace
-     - Use `lsp-references` to find all usages of a symbol
+     - Use `lsp-refs` to find all usages of a symbol
      - Use `lsp-hover` to verify type signatures
      - Use `lsp-analyze` for batch analysis of file structure
 {{/if}}
@@ -30,14 +30,7 @@ Variables: {{LINK:testing}}, {{#if development-skills}}, {{#if supports-slash-co
 4. **Tool-Assisted Verification**: Use available tools to enhance verification accuracy:
 {{#if development-skills}}
    - **TypeScript LSP tools** (when available): Use for type-aware analysis of `.ts`, `.tsx`, `.js`, `.jsx` files
-{{/if}}
-{{#if supports-slash-commands}}
-     - Available via `/lsp-hover`, `/lsp-find`, `/lsp-refs`, `/lsp-analyze` commands
-{{/if}}
-{{^if supports-slash-commands}}
-{{#if development-skills}}
      - Available via `bunx @plaited/development-skills lsp-*` commands
-{{/if}}
 {{/if}}
    - **WebFetch**: Retrieve current documentation from authoritative sources (MDN Web Docs, WHATWG specs) when using web platform APIs
    - These tools complement (but do not replace) reading live code - always verify outputs against actual implementation

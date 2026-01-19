@@ -2,40 +2,38 @@
 /**
  * Scaffold development rules from templates
  *
- * Reads bundled rule templates, processes template variables and conditionals,
+ * Reads bundled rule templates, processes template variables,
  * and outputs JSON for agent consumption.
  *
- * Supports 2 target formats:
- * - claude: Claude Code with .claude/rules/ directory
- * - agents-md: Universal AGENTS.md format with .plaited/rules/
- *   (works with Cursor, Factory, Copilot, Windsurf, Cline, Aider, and 60,000+ others)
+ * All agents use `.plaited/rules/` as the unified default location.
+ * The output includes marker-wrapped sections for both CLAUDE.md and AGENTS.md,
+ * allowing programmatic updates without destroying user content.
  *
  * Options:
- * - --agent, -a: Target format (claude | agents-md)
- * - --rules-dir, -d: Custom rules directory path (overrides default)
- * - --agents-md-path, -m: Custom AGENTS.md file path (default: AGENTS.md)
+ * - --rules-dir, -d: Custom rules directory path (overrides default .plaited/rules)
  * - --rules, -r: Filter to specific rules (can be used multiple times)
+ *
+ * Output includes:
+ * - claudeMdSection: Marker-wrapped section with @ syntax for CLAUDE.md
+ * - agentsMdSection: Marker-wrapped section with markdown links for AGENTS.md
+ * - templates: Processed rule content for each selected rule
  *
  * Template syntax:
  * - {{LINK:rule-id}} - Cross-reference to another rule
- * - {{#if development-skills}}...{{/if}} - Conditional block
- * - {{#if capability}}...{{/if}} - Capability-based conditional
- * - {{^if condition}}...{{/if}} - Inverse conditional
+ * - {{#if development-skills}}...{{/if}} - Conditional block (always true when using CLI)
+ * - {{^if development-skills}}...{{/if}} - Inverse conditional
  * - <!-- RULE TEMPLATE ... --> - Template header (removed)
- *
- * Capabilities:
- * - has-sandbox: Agent runs in sandboxed environment (Claude Code only)
- * - supports-slash-commands: Agent has /command syntax (Claude Code only)
  *
  * @example
  * ```bash
- * # Default paths
- * bunx @plaited/development-skills scaffold-rules --agent=claude
- * bunx @plaited/development-skills scaffold-rules --agent=agents-md
+ * # Default: outputs to .plaited/rules/
+ * bunx @plaited/development-skills scaffold-rules
  *
- * # Custom paths
- * bunx @plaited/development-skills scaffold-rules --agent=agents-md --rules-dir=.cursor/rules
- * bunx @plaited/development-skills scaffold-rules --agent=agents-md --agents-md-path=docs/AGENTS.md
+ * # Custom rules directory
+ * bunx @plaited/development-skills scaffold-rules --rules-dir=.cursor/rules
+ *
+ * # Filter specific rules
+ * bunx @plaited/development-skills scaffold-rules --rules testing --rules bun-apis
  * ```
  */
 
@@ -44,26 +42,28 @@ import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 
 /**
- * Supported agent targets
+ * Marker delimiters for programmatic file updates
  *
  * @remarks
- * - claude: Claude Code with its own .claude/ directory structure
- * - agents-md: Universal AGENTS.md format (works with Cursor, Factory, Copilot,
- *   Windsurf, Cline, Aider, and 60,000+ other projects)
+ * These markers allow scaffold-rules to update CLAUDE.md and AGENTS.md
+ * without destroying user content outside the marked section.
  */
-type Agent = 'claude' | 'agents-md'
+const MARKERS = {
+  start: '<!-- PLAITED-RULES-START -->',
+  end: '<!-- PLAITED-RULES-END -->',
+} as const
 
-type AgentCapabilities = {
-  hasSandbox: boolean
-  multiFileRules: boolean
-  supportsSlashCommands: boolean
-  supportsAgentsMd: boolean
-}
+/**
+ * Unified rules directory path
+ *
+ * @remarks
+ * All agents use `.plaited/rules/` as the default location.
+ * This provides consistency and allows both CLAUDE.md and AGENTS.md
+ * to reference the same rule files.
+ */
+const UNIFIED_RULES_PATH = '.plaited/rules' as const
 
 type TemplateContext = {
-  agent: Agent
-  capabilities: AgentCapabilities
-  hasDevelopmentSkills: boolean
   rulesPath: string
 }
 
@@ -74,88 +74,24 @@ type ProcessedTemplate = {
 }
 
 type ScaffoldOutput = {
-  agent: Agent
   rulesPath: string
-  agentsMdPath: string
-  format: 'multi-file' | 'agents-md'
-  supportsAgentsMd: boolean
-  agentsMdContent?: string
+  /** Marker-wrapped section with @ syntax for CLAUDE.md */
+  claudeMdSection: string
+  /** Marker-wrapped section with markdown links for AGENTS.md */
+  agentsMdSection: string
   templates: Record<string, ProcessedTemplate>
-}
-
-/**
- * Agent capabilities matrix
- *
- * @remarks
- * - hasSandbox: Runs in restricted environment (affects git commands, temp files)
- * - multiFileRules: Supports directory of rule files vs single file
- * - supportsSlashCommands: Has /command syntax for invoking tools
- * - supportsAgentsMd: Reads AGENTS.md format
- *
- * Note: We only support 2 targets now:
- * - claude: Claude Code with unique .claude/ directory system
- * - agents-md: Universal format for all AGENTS.md-compatible agents
- *   (Cursor, Factory, Copilot, Windsurf, Cline, Aider, and 60,000+ others)
- */
-const AGENT_CAPABILITIES: Record<Agent, AgentCapabilities> = {
-  claude: {
-    hasSandbox: true,
-    multiFileRules: true,
-    supportsSlashCommands: true,
-    supportsAgentsMd: false,
-  },
-  'agents-md': {
-    hasSandbox: false,
-    multiFileRules: true,
-    supportsSlashCommands: false,
-    supportsAgentsMd: true,
-  },
-}
-
-/**
- * Evaluate a single condition against context
- */
-const evaluateCondition = (condition: string, context: TemplateContext): boolean => {
-  // Check development-skills
-  if (condition === 'development-skills') {
-    return context.hasDevelopmentSkills
-  }
-
-  // Check capability-based conditions
-  if (condition === 'has-sandbox') {
-    return context.capabilities.hasSandbox
-  }
-  if (condition === 'multi-file-rules') {
-    return context.capabilities.multiFileRules
-  }
-  if (condition === 'supports-slash-commands') {
-    return context.capabilities.supportsSlashCommands
-  }
-  if (condition === 'supports-agents-md') {
-    return context.capabilities.supportsAgentsMd
-  }
-
-  // Check agent-specific conditions (legacy: agent:name)
-  const agentMatch = condition.match(/^agent:(\w+)$/)
-  if (agentMatch) {
-    return context.agent === agentMatch[1]
-  }
-
-  return false
 }
 
 /**
  * Process template conditionals
  *
  * Handles:
- * - {{#if development-skills}}...{{/if}}
- * - {{#if capability}}...{{/if}} (has-sandbox, multi-file-rules, etc.)
- * - {{#if agent:name}}...{{/if}} (legacy, still supported)
- * - {{^if condition}}...{{/if}} (inverse)
+ * - {{#if development-skills}}...{{/if}} - Always true (using our CLI means dev-skills is installed)
+ * - {{^if development-skills}}...{{/if}} - Always false
  *
  * Processes iteratively to handle nested conditionals correctly.
  */
-const processConditionals = (content: string, context: TemplateContext): string => {
+const processConditionals = (content: string): string => {
   let result = content
   let previousResult = ''
 
@@ -163,22 +99,18 @@ const processConditionals = (content: string, context: TemplateContext): string 
   while (result !== previousResult) {
     previousResult = result
 
-    // Process positive conditionals {{#if condition}}...{{/if}}
-    // Use non-greedy match that doesn't cross other conditional boundaries
-    // Note: Nested quantifiers are safe here - input is trusted bundled templates, not user content
+    // Process positive conditionals {{#if development-skills}}...{{/if}}
+    // Always true - include the block content
     result = result.replace(
-      /\{\{#if ([\w:-]+)\}\}((?:(?!\{\{#if )(?!\{\{\^if )(?!\{\{\/if\}\})[\s\S])*?)\{\{\/if\}\}/g,
-      (_, condition, block) => {
-        return evaluateCondition(condition, context) ? block : ''
-      },
+      /\{\{#if development-skills\}\}((?:(?!\{\{#if )(?!\{\{\^if )(?!\{\{\/if\}\})[\s\S])*?)\{\{\/if\}\}/g,
+      (_, block) => block,
     )
 
-    // Process inverse conditionals {{^if condition}}...{{/if}}
+    // Process inverse conditionals {{^if development-skills}}...{{/if}}
+    // Always false - remove the block content
     result = result.replace(
-      /\{\{\^if ([\w:-]+)\}\}((?:(?!\{\{#if )(?!\{\{\^if )(?!\{\{\/if\}\})[\s\S])*?)\{\{\/if\}\}/g,
-      (_, condition, block) => {
-        return evaluateCondition(condition, context) ? '' : block
-      },
+      /\{\{\^if development-skills\}\}((?:(?!\{\{#if )(?!\{\{\^if )(?!\{\{\/if\}\})[\s\S])*?)\{\{\/if\}\}/g,
+      () => '',
     )
   }
 
@@ -189,37 +121,21 @@ const processConditionals = (content: string, context: TemplateContext): string 
  * Process template variables
  *
  * Handles:
- * - {{LINK:rule-id}} - Generate cross-reference
- * - {{AGENT_NAME}} - Agent name
+ * - {{LINK:rule-id}} - Generate cross-reference path
  * - {{RULES_PATH}} - Rules path
  */
 const processVariables = (content: string, context: TemplateContext): string => {
   let result = content
 
-  // Replace {{LINK:rule-id}} with appropriate cross-reference
+  // Replace {{LINK:rule-id}} with path reference
   result = result.replace(/\{\{LINK:(\w+)\}\}/g, (_, ruleId) => {
-    return generateCrossReference(ruleId, context)
+    return `${context.rulesPath}/${ruleId}.md`
   })
-
-  // Replace {{AGENT_NAME}}
-  result = result.replace(/\{\{AGENT_NAME\}\}/g, context.agent)
 
   // Replace {{RULES_PATH}}
   result = result.replace(/\{\{RULES_PATH\}\}/g, context.rulesPath)
 
   return result
-}
-
-/**
- * Generate cross-reference based on agent format
- */
-const generateCrossReference = (ruleId: string, context: TemplateContext): string => {
-  if (context.agent === 'claude') {
-    // Claude Code uses @ syntax for file references
-    return `@${context.rulesPath}/${ruleId}.md`
-  }
-  // Use context.rulesPath for cross-references (supports custom --rules-dir)
-  return `${context.rulesPath}/${ruleId}.md`
 }
 
 /**
@@ -258,7 +174,7 @@ const processTemplate = (content: string, context: TemplateContext): string => {
   result = removeTemplateHeaders(result)
 
   // 2. Process conditionals
-  result = processConditionals(result, context)
+  result = processConditionals(result)
 
   // 3. Process variables
   result = processVariables(result, context)
@@ -270,27 +186,43 @@ const processTemplate = (content: string, context: TemplateContext): string => {
 }
 
 /**
- * Get rules path for agent
+ * Generate marker-wrapped section for CLAUDE.md with @ syntax
+ *
+ * @remarks
+ * Claude Code uses `@path/to/file.md` syntax to reference rule files.
+ * The markers allow this section to be updated without affecting other content.
  */
-const getRulesPath = (agent: Agent): string => {
-  return agent === 'claude' ? '.claude/rules' : '.plaited/rules'
-}
-
-/**
- * Get output format for agent
- */
-const getOutputFormat = (agent: Agent): 'multi-file' | 'agents-md' => {
-  return agent === 'claude' ? 'multi-file' : 'agents-md'
-}
-
-/**
- * Generate AGENTS.md content that links to rules directory
- */
-const generateAgentsMd = (templates: Record<string, ProcessedTemplate>, rulesPath: string): string => {
+const generateClaudeMdSection = (templates: Record<string, ProcessedTemplate>, rulesPath: string): string => {
   const lines = [
-    '# AGENTS.md',
+    MARKERS.start,
     '',
-    'Development rules for AI coding agents.',
+    '## Project Rules',
+    '',
+    `This project uses modular development rules stored in \`${rulesPath}/\`.`,
+    'Each rule file covers a specific topic:',
+    '',
+  ]
+
+  for (const [_ruleId, template] of Object.entries(templates)) {
+    lines.push(`- @${rulesPath}/${template.filename} - ${template.description}`)
+  }
+
+  lines.push('')
+  lines.push(MARKERS.end)
+
+  return lines.join('\n')
+}
+
+/**
+ * Generate marker-wrapped section for AGENTS.md with markdown links
+ *
+ * @remarks
+ * AGENTS.md format uses standard markdown links to reference rule files.
+ * The markers allow this section to be updated without affecting other content.
+ */
+const generateAgentsMdSection = (templates: Record<string, ProcessedTemplate>, rulesPath: string): string => {
+  const lines = [
+    MARKERS.start,
     '',
     '## Rules',
     '',
@@ -304,10 +236,7 @@ const generateAgentsMd = (templates: Record<string, ProcessedTemplate>, rulesPat
   }
 
   lines.push('')
-  lines.push('## Quick Reference')
-  lines.push('')
-  lines.push('For detailed guidance on each topic, see the linked rule files above.')
-  lines.push('')
+  lines.push(MARKERS.end)
 
   return lines.join('\n')
 }
@@ -319,16 +248,6 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
   const { values } = parseArgs({
     args,
     options: {
-      agent: {
-        type: 'string',
-        short: 'a',
-        default: 'claude',
-      },
-      format: {
-        type: 'string',
-        short: 'f',
-        default: 'json',
-      },
       rules: {
         type: 'string',
         short: 'r',
@@ -338,29 +257,13 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
         type: 'string',
         short: 'd',
       },
-      'agents-md-path': {
-        type: 'string',
-        short: 'm',
-      },
     },
     allowPositionals: true,
     strict: false,
   })
 
-  const agent = values.agent as Agent
   const rulesFilter = values.rules as string[] | undefined
   const customRulesDir = values['rules-dir'] as string | undefined
-  const customAgentsMdPath = values['agents-md-path'] as string | undefined
-
-  // Validate agent
-  const validAgents: Agent[] = ['claude', 'agents-md']
-  if (!validAgents.includes(agent)) {
-    console.error(`Error: Invalid agent "${agent}". Must be one of: ${validAgents.join(', ')}`)
-    console.error(
-      'Note: Use "agents-md" for Cursor, Factory, Copilot, Windsurf, Cline, Aider, and other AGENTS.md-compatible tools.',
-    )
-    process.exit(1)
-  }
 
   // Get bundled templates directory
   const packageRulesDir = join(import.meta.dir, '../.claude/rules')
@@ -376,16 +279,11 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
   // Process each template
   const templates: Record<string, ProcessedTemplate> = {}
-  const capabilities = AGENT_CAPABILITIES[agent]
 
-  // Use custom paths or defaults
-  const rulesPath = customRulesDir ?? getRulesPath(agent)
-  const agentsMdPath = customAgentsMdPath ?? 'AGENTS.md'
+  // Use custom path or unified default
+  const rulesPath = customRulesDir ?? UNIFIED_RULES_PATH
 
   const context: TemplateContext = {
-    agent,
-    capabilities,
-    hasDevelopmentSkills: true, // Always true when using our CLI
     rulesPath,
   }
 
@@ -411,19 +309,16 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
     }
   }
 
+  // Generate marker-wrapped sections for both CLAUDE.md and AGENTS.md
+  const claudeMdSection = generateClaudeMdSection(templates, rulesPath)
+  const agentsMdSection = generateAgentsMdSection(templates, rulesPath)
+
   // Build output
   const output: ScaffoldOutput = {
-    agent,
     rulesPath,
-    agentsMdPath,
-    format: getOutputFormat(agent),
-    supportsAgentsMd: capabilities.supportsAgentsMd,
+    claudeMdSection,
+    agentsMdSection,
     templates,
-  }
-
-  // Generate AGENTS.md content for agents-md format
-  if (agent === 'agents-md') {
-    output.agentsMdContent = generateAgentsMd(templates, rulesPath)
   }
 
   console.log(JSON.stringify(output, null, 2))
