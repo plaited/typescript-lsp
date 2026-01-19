@@ -59,6 +59,8 @@ import { parseArgs } from 'node:util'
  *
  * @property start - Opening marker to place before rules section
  * @property end - Closing marker to place after rules section
+ *
+ * @public
  */
 export const MARKERS = {
   start: '<!-- PLAITED-RULES-START -->',
@@ -133,6 +135,10 @@ const processConditionals = (content: string): string => {
       /\{\{\^if development-skills\}\}((?:(?!\{\{#if )(?!\{\{\^if )(?!\{\{\/if\}\})[\s\S])*?)\{\{\/if\}\}/g,
       () => '',
     )
+  }
+
+  if (iterations >= maxIterations) {
+    console.warn('Warning: Max iterations reached in template processing. Some conditionals may be unprocessed.')
   }
 
   return result
@@ -347,8 +353,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
         description: extractDescription(processed),
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(`Error processing template ${file}: ${message}`)
+      console.error(`Error processing template ${file}:`, error)
       process.exit(1)
     }
   }

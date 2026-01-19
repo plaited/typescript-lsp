@@ -75,7 +75,7 @@ export const lspHover = async (args: string[]) => {
       console.log('null')
     }
   } catch (error) {
-    console.error(`Error: ${error}`)
+    console.error('Error:', error)
     await client.stop()
     process.exit(1)
   }
