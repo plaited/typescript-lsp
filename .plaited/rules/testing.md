@@ -1,8 +1,3 @@
-<!--
-RULE TEMPLATE - Distributed via scaffold-rules skill
-Variables: {{#if agent:claude}}
--->
-
 # Testing
 
 Use Bun's built-in test runner for unit and integration tests.

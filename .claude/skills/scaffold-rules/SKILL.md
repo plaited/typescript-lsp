@@ -14,7 +14,7 @@ Scaffold development rules for AI coding agent environments.
 
 Use this skill when the user wants to:
 - Set up development rules or coding conventions
-- Configure their AI coding agent (Claude Code, Cursor, Copilot, etc.)
+- Configure their AI coding agent environment
 - Add or update project guidelines
 
 ## Workflow

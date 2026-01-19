@@ -1,13 +1,13 @@
 # AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Agents when working with code in this repository.
 
 ## Overview
 
 This repository provides the **@plaited/development-skills** package with dual distribution:
 
 1. **CLI Tool** - TypeScript LSP integration, code documentation, and skill validation via `bunx @plaited/development-skills`
-2. **AI Agent Skills** - Installable skills for Claude Code and other AI coding agents via marketplace
+2. **AI Agent Skills** - Installable skills for AI coding agents
 
 The package provides development tools including TypeScript LSP integration, code documentation utilities, and skill validation.
 
@@ -76,16 +76,6 @@ This repository provides the **@plaited/development-skills** package with the fo
 
 **Scaffold Rules** (`scaffold-rules`) - Scaffold development rules for AI coding agents
 
-### Code Style Essentials
-
-- Prefer arrow functions and `type` over `interface`
-- Use `test` instead of `it` in test files
-- Prefer Bun native APIs over Node.js equivalents
-- Object parameters for functions with 2+ parameters
-- JSON imports require `with { type: 'json' }` attribute
-
-For complete conventions, see `.plaited/rules/code-review.md`
-
 ### Package Structure
 
 This project has dual distribution (CLI + AI agent skills):
@@ -104,19 +94,11 @@ This project has dual distribution (CLI + AI agent skills):
 
 **Distribution:**
 - CLI: Published to npm, usable via `bunx @plaited/development-skills`
-- Skills: Installed via marketplace curl script to `.claude/skills/` for AI agents
+- Skills: Installed via [skills-installer](https://github.com/plaited/skills-installer) to `.claude/skills/` for AI agents
 
 When working on the package:
 - Test CLI: `bun bin/cli.ts <command>`
 - All skills use the CLI tools under the hood
-
-### Documentation
-
-- Public APIs require comprehensive TSDoc documentation
-- No `@example` sections - tests are living examples
-- Use `@internal` marker for non-public APIs
-- Always use `type` over `interface`
-- Use Mermaid diagrams only (not ASCII art)
 
 ## Important Constraints
 
@@ -154,9 +136,11 @@ development-skills lsp-hover src/app.ts 25 10
 ```
 
 **AI Agent Skills:**
-Skills can be installed for AI coding agents (Claude Code, Cursor, etc.) via marketplace:
+Install skills for AI coding agents:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/plaited/marketplace/main/install.sh | bash -s -- --agent claude --plugin development-skills
+curl -fsSL https://raw.githubusercontent.com/plaited/skills-installer/main/install.sh | bash -s -- --agent <agent-name> --project development-skills
 ```
 
-See individual skill SKILL.md files in `.claude/skills/` for complete documentation.
+Replace `<agent-name>` with: `claude`, `cursor`, `copilot`, `opencode`, `amp`, `goose`, `factory`
+
+See individual skill SKILL.md files for complete documentation.

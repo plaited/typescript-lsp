@@ -1,8 +1,3 @@
-<!--
-RULE TEMPLATE - Distributed via scaffold-rules skill
-Variables: {{LINK:*}}
--->
-
 # Git Workflow
 
 ## Commit Message Format

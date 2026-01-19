@@ -1,8 +1,3 @@
-<!--
-RULE TEMPLATE - Distributed via scaffold-rules skill
-Variables: {{#if bun}}
--->
-
 # Module Organization
 
 ## No Index Files
@@ -43,9 +38,7 @@ Only use `main.ts` if the package truly has multiple co-equal entry points that 
 
 ## Explicit Import Extensions
 
-{{#if bun}}
 Always include `.ts` extensions in imports. Bun runs TypeScript natively—no compilation required:
-{{/if}}
 
 ```typescript
 // ✅ Good
