@@ -9,6 +9,15 @@ Find all references to a symbol at a specific position. Use this before modifyin
 
 **Arguments:** $ARGUMENTS
 
+## When to Use Each Tool
+
+| Tool | Purpose |
+|------|---------|
+| **Glob** | Find files by pattern |
+| **Grep** | Search text content |
+| **lsp-find** | Search TypeScript symbols |
+| **lsp-refs** | Find all references to a symbol |
+
 ## Usage
 
 ```

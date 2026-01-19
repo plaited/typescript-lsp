@@ -1,43 +1,66 @@
 ---
-description: Search for TypeScript symbols across the workspace by name
+description: Search for TypeScript SYMBOLS (functions, types, classes) - NOT text
 allowed-tools: Bash
 ---
 
 # LSP Find
 
-Search for symbols (functions, types, classes, variables) across the TypeScript/JavaScript codebase.
+Search for TypeScript **symbols** (functions, types, classes, variables) across the codebase.
 
 **Arguments:** $ARGUMENTS
+
+## When to Use Each Tool
+
+| Tool | Purpose |
+|------|---------|
+| **Glob** | Find files by pattern |
+| **Grep** | Search text content |
+| **lsp-find** | Search TypeScript symbols |
+| **lsp-hover** | Get type info + TSDoc documentation |
 
 ## Usage
 
 ```
-/lsp-find <query> [context-file]
+/lsp-find <query> <context-file>
 ```
 
-- `query`: Symbol name or partial name to search for
-- `context-file`: Optional file to open for project context
+- `query`: TypeScript symbol name (function, type, class, variable)
+- `context-file`: Any `.ts` file in the project for LSP context
+
+## When NOT to Use
+
+```
+# ❌ WRONG: Searching for text (use Grep instead)
+/lsp-find scaffold
+/lsp-find TODO
+
+# ❌ WRONG: Missing context file
+/lsp-find createClient
+
+# ✅ CORRECT: Symbol search with context file
+/lsp-find createClient src/lsp-client.ts
+```
 
 ## Instructions
 
 ### Step 1: Parse Arguments
 
-Extract query and optional context file from `$ARGUMENTS`.
+Extract query and context file from `$ARGUMENTS`.
 
-If query is missing, show usage:
+If either is missing, show usage:
 ```
-Usage: /lsp-find <query> [context-file]
+Usage: /lsp-find <query> <context-file>
 
 Examples:
-  /lsp-find bElement
-  /lsp-find useTemplate src/main/use-template.ts
+  /lsp-find LspClient src/lsp-client.ts
+  /lsp-find createClient src/app.ts
 ```
 
 ### Step 2: Run LSP Find
 
 Execute the development-skills CLI command:
 ```bash
-bunx @plaited/development-skills lsp-find <query> [context-file]
+bunx @plaited/development-skills lsp-find <query> <context-file>
 ```
 
 ### Step 3: Format Output

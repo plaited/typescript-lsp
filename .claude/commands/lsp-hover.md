@@ -1,13 +1,22 @@
 ---
-description: Get TypeScript type information at a specific position in a file
+description: Get TypeScript type signature + TSDoc documentation at a position
 allowed-tools: Bash
 ---
 
 # LSP Hover
 
-Get type information at a specific position in a TypeScript/JavaScript file.
+Get type signature and TSDoc documentation at a specific position in a TypeScript/JavaScript file.
 
 **Arguments:** $ARGUMENTS
+
+## When to Use Each Tool
+
+| Tool | Purpose |
+|------|---------|
+| **Glob** | Find files by pattern |
+| **Grep** | Search text content |
+| **lsp-find** | Search TypeScript symbols |
+| **lsp-hover** | Get type info + TSDoc documentation |
 
 ## Usage
 
