@@ -10,8 +10,8 @@ type Template = {
 
 type ScaffoldOutput = {
   rulesPath: string
-  claudeMdSection: string
   agentsMdSection: string
+  claudeMdReference: string
   templates: Record<string, Template>
 }
 
@@ -121,39 +121,135 @@ describe('scaffold-rules', () => {
       expect(result.rulesPath).toBe('.plaited/rules')
     })
 
-    test('includes claudeMdSection with markers and @ syntax', async () => {
+    test('includes claudeMdReference with markers and @AGENTS.md', async () => {
       const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
-      expect(result.claudeMdSection).toContain('<!-- PLAITED-RULES-START -->')
-      expect(result.claudeMdSection).toContain('<!-- PLAITED-RULES-END -->')
-      expect(result.claudeMdSection).toContain('@.plaited/rules/')
-      expect(result.claudeMdSection).toContain('## Project Rules')
+      expect(result.claudeMdReference).toContain('<!-- PLAITED-RULES-START -->')
+      expect(result.claudeMdReference).toContain('<!-- PLAITED-RULES-END -->')
+      expect(result.claudeMdReference).toContain('@AGENTS.md')
+      expect(result.claudeMdReference).toContain('## Project Rules')
     })
 
-    test('includes agentsMdSection with markers and markdown links', async () => {
+    test('includes agentsMdSection with markers and dual format', async () => {
       const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
       expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-START -->')
       expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-END -->')
-      expect(result.agentsMdSection).toContain('[')
+      // Should have @ syntax for Claude Code
+      expect(result.agentsMdSection).toContain('@.plaited/rules/')
+      // Should have markdown links for other tools
       expect(result.agentsMdSection).toContain('](.plaited/rules/')
       expect(result.agentsMdSection).toContain('## Rules')
     })
 
-    test('claudeMdSection lists all selected rules', async () => {
+    test('claudeMdReference does not list individual rules', async () => {
       const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
-      for (const template of Object.values(result.templates)) {
-        expect(result.claudeMdSection).toContain(`@.plaited/rules/${template.filename}`)
-      }
+      // claudeMdReference should be a simple reference to AGENTS.md, not a list of rules
+      expect(result.claudeMdReference).not.toContain('.plaited/rules/')
+      expect(result.claudeMdReference).toContain('@AGENTS.md')
     })
 
-    test('agentsMdSection lists all selected rules', async () => {
+    test('agentsMdSection lists all selected rules in dual format', async () => {
       const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
 
       for (const [ruleId, template] of Object.entries(result.templates)) {
+        // Each rule should have both @ syntax and markdown link
+        expect(result.agentsMdSection).toContain(`@.plaited/rules/${template.filename}`)
         expect(result.agentsMdSection).toContain(`[${ruleId}](.plaited/rules/${template.filename})`)
       }
+    })
+  })
+
+  describe('claudeMdReference behavior', () => {
+    test('has exact expected content structure', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      // Verify the exact structure of claudeMdReference
+      const lines = result.claudeMdReference.split('\n')
+      expect(lines[0]).toBe('<!-- PLAITED-RULES-START -->')
+      expect(lines[1]).toBe('')
+      expect(lines[2]).toBe('## Project Rules')
+      expect(lines[3]).toBe('')
+      expect(lines[4]).toBe('See @AGENTS.md for shared development rules.')
+      expect(lines[5]).toBe('')
+      expect(lines[6]).toBe('<!-- PLAITED-RULES-END -->')
+    })
+
+    test('is constant regardless of rules selected', async () => {
+      const allRules: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+      const oneRule: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules testing`.json()
+      const twoRules: ScaffoldOutput =
+        await $`bun ${binDir}/cli.ts scaffold-rules --rules testing --rules accuracy`.json()
+
+      // claudeMdReference should be identical in all cases
+      expect(oneRule.claudeMdReference).toBe(allRules.claudeMdReference)
+      expect(twoRules.claudeMdReference).toBe(allRules.claudeMdReference)
+    })
+
+    test('is constant regardless of rules-dir', async () => {
+      const defaultPath: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+      const customPath: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
+      const anotherPath: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=custom/path`.json()
+
+      // claudeMdReference should be identical regardless of rules-dir
+      expect(customPath.claudeMdReference).toBe(defaultPath.claudeMdReference)
+      expect(anotherPath.claudeMdReference).toBe(defaultPath.claudeMdReference)
+    })
+
+    test('uses shared markers with agentsMdSection', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      // Both sections should use the same markers for consistency
+      const startMarker = '<!-- PLAITED-RULES-START -->'
+      const endMarker = '<!-- PLAITED-RULES-END -->'
+
+      expect(result.claudeMdReference).toContain(startMarker)
+      expect(result.claudeMdReference).toContain(endMarker)
+      expect(result.agentsMdSection).toContain(startMarker)
+      expect(result.agentsMdSection).toContain(endMarker)
+    })
+  })
+
+  describe('agentsMdSection with filtered rules', () => {
+    test('only includes selected rules in dual format', async () => {
+      const result: ScaffoldOutput =
+        await $`bun ${binDir}/cli.ts scaffold-rules --rules testing --rules bun-apis`.json()
+
+      // Should contain selected rules (both @ and markdown formats)
+      expect(result.agentsMdSection).toContain('@.plaited/rules/testing.md')
+      expect(result.agentsMdSection).toContain('[testing]')
+      expect(result.agentsMdSection).toContain('@.plaited/rules/bun-apis.md')
+      expect(result.agentsMdSection).toContain('[bun-apis]')
+
+      // Should NOT contain other rules
+      expect(result.agentsMdSection).not.toContain('@.plaited/rules/accuracy.md')
+      expect(result.agentsMdSection).not.toContain('[accuracy]')
+      expect(result.agentsMdSection).not.toContain('@.plaited/rules/git-workflow.md')
+    })
+
+    test('has valid structure with single rule in dual format', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules testing`.json()
+
+      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-START -->')
+      expect(result.agentsMdSection).toContain('## Rules')
+      // Both formats present
+      expect(result.agentsMdSection).toContain('@.plaited/rules/testing.md')
+      expect(result.agentsMdSection).toContain('[testing](.plaited/rules/testing.md)')
+      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-END -->')
+    })
+
+    test('has empty rules list when no rules match', async () => {
+      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules nonexistent`.nothrow().json()
+
+      // Should still have valid structure with markers
+      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-START -->')
+      expect(result.agentsMdSection).toContain('## Rules')
+      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-END -->')
+
+      // But no rule references (neither @ nor markdown)
+      expect(result.agentsMdSection).not.toMatch(/@\.plaited\/rules\/.*\.md/)
+      expect(result.agentsMdSection).not.toMatch(/\[.*\]\(\.plaited\/rules\/.*\.md\)/)
     })
   })
 
@@ -194,17 +290,20 @@ describe('scaffold-rules', () => {
       expect(result.rulesPath).toBe('.cursor/rules')
     })
 
-    test('claudeMdSection uses custom path', async () => {
+    test('claudeMdReference is path-independent', async () => {
       const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
 
-      expect(result.claudeMdSection).toContain('@.cursor/rules/')
-      expect(result.claudeMdSection).not.toContain('.plaited/rules/')
+      // claudeMdReference always references AGENTS.md regardless of rules path
+      expect(result.claudeMdReference).toContain('@AGENTS.md')
+      expect(result.claudeMdReference).not.toContain('.cursor/rules')
     })
 
-    test('agentsMdSection uses custom path', async () => {
+    test('agentsMdSection uses custom path in both formats', async () => {
       const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
 
-      expect(result.agentsMdSection).toContain('.cursor/rules/')
+      // Both @ syntax and markdown links should use custom path
+      expect(result.agentsMdSection).toContain('@.cursor/rules/')
+      expect(result.agentsMdSection).toContain('](.cursor/rules/')
       expect(result.agentsMdSection).not.toContain('.plaited/rules/')
     })
 
@@ -278,8 +377,8 @@ describe('scaffold-rules', () => {
 
       // Should return valid output with empty templates
       expect(result.templates).toEqual({})
-      expect(result.claudeMdSection).toContain('<!-- PLAITED-RULES-START -->')
-      expect(result.claudeMdSection).toContain('<!-- PLAITED-RULES-END -->')
+      expect(result.claudeMdReference).toContain('<!-- PLAITED-RULES-START -->')
+      expect(result.claudeMdReference).toContain('<!-- PLAITED-RULES-END -->')
     })
 
     test('description extraction falls back for heading-only content', async () => {

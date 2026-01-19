@@ -13,7 +13,7 @@ Before completing a code review, run these validation scripts:
 
 ### AgentSkills Validation
 
-When working with AgentSkills directories (`.claude/skills/`, `.cursor/skills/`, `.factory/skills/`, etc.):
+When working with AgentSkills directories (`.plaited/skills/`, `.claude/skills/`, `.cursor/skills/`, `.factory/skills/`, etc.):
 
 {{#if development-skills}}
 **Validate structure:**
