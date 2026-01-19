@@ -1,6 +1,6 @@
 <!--
-RULE TEMPLATE - Distributed via /scaffold-rules
-Variables: {{#if development-skills}}, {{#if supports-slash-commands}}
+RULE TEMPLATE - Distributed via scaffold-rules skill
+Variables: {{#if development-skills}}
 -->
 
 # Code Review Standards
@@ -17,16 +17,9 @@ When working with AgentSkills directories (`.claude/skills/`, `.cursor/skills/`,
 
 {{#if development-skills}}
 **Validate structure:**
-{{#if supports-slash-commands}}
-```
-/validate-skill <path>
-```
-{{/if}}
-{{^if supports-slash-commands}}
 ```bash
 bunx @plaited/development-skills validate-skill <path>
 ```
-{{/if}}
 
 This checks:
 - SKILL.md exists with required frontmatter (name, description)

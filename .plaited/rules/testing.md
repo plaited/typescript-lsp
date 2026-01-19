@@ -1,5 +1,5 @@
 <!--
-RULE TEMPLATE - Distributed via /scaffold-rules
+RULE TEMPLATE - Distributed via scaffold-rules skill
 Variables: {{#if agent:claude}}
 -->
 

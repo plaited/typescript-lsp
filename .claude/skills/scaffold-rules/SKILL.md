@@ -3,12 +3,12 @@ name: scaffold-rules
 description: Scaffold development rules for AI coding agents. Auto-invoked when user asks about setting up rules, coding conventions, or configuring their AI agent environment.
 license: ISC
 compatibility: Requires bun
-allowed-tools: Glob, Read, Write, Edit, AskUserQuestion
+allowed-tools: Bash, Glob, Read, Write, Edit, AskUserQuestion
 ---
 
 # Scaffold Rules
 
-Scaffold and merge development rules adapted to different AI coding agent environments.
+Scaffold development rules for AI coding agent environments.
 
 ## Purpose
 
@@ -16,89 +16,83 @@ Use this skill when the user wants to:
 - Set up development rules or coding conventions
 - Configure their AI coding agent (Claude Code, Cursor, Copilot, etc.)
 - Add or update project guidelines
-- Standardize conventions across a team
 
-## Supported Agents
+## Workflow
 
-| Agent | Config Location | Format |
-|-------|-----------------|--------|
-| Claude Code | `.claude/rules/*.md` | Separate markdown files |
-| Cursor | `.cursorrules` or `.cursor/rules/*.md` | Single or multi-file |
-| GitHub Copilot | `.github/copilot-instructions.md` | Single file |
-| Windsurf | `.windsurfrules` | Single file |
-| Cline/Roo | `.clinerules` | Single file |
-| Aider | `.aider.conf.yml` | YAML config |
+### Step 1: Get Processed Templates from CLI
 
-## Rule Categories
+```bash
+bunx @plaited/development-skills scaffold-rules
+```
 
-### Bun APIs
-Prefer Bun's native APIs over Node.js equivalents:
-- `Bun.file()` over `fs` APIs
-- `Bun.$` for shell commands
-- `Bun.write()` for file writes
-- `import.meta.dir` for current directory
+Parse the JSON output. The `templates` object contains all available rules - use these when presenting options to the user.
 
-### Git Workflow
-Commit conventions and version control:
-- Conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`
-- Multi-line commit message formatting
-- Agent-specific sandbox workarounds
+### Step 2: Check for Existing Rules
 
-### GitHub CLI
-Prefer `gh` CLI for GitHub operations:
-- PR review and creation patterns
-- Issue management
-- JSON output field references
-- Authentication benefits over WebFetch
+If `.plaited/rules/` already exists with files:
+- Warn the user that existing rules will be overwritten
+- Ask for confirmation before proceeding
+- If declined, abort
 
-### TypeScript Conventions
-Code style standards:
-- Prefer `type` over `interface`
-- No `any` types (use `unknown` with type guards)
-- Arrow functions preferred
-- Object parameter pattern for 2+ parameters
-- PascalCase for types, `PascalCaseSchema` suffix for Zod schemas
+### Step 3: Ask User Preferences
 
-### Testing Patterns
-Bun test runner conventions:
-- Use `test()` instead of `it()`
-- `*.spec.ts` file naming
-- No conditionals around assertions
-- Assert existence before checking values
+Present available templates from the CLI output and ask which to scaffold. Build options dynamically from `templates` keys and descriptions.
 
-### Module Organization
-Import/export patterns for Bun/TypeScript projects:
-- No `index.ts` files—use named re-export files matching folder names
-- Single feature packages expose the feature file directly as main
-- Explicit `.ts` extensions in all imports
-- Flat re-export structure: `src/acp.ts` re-exports from `src/acp/`
+### Step 4: Write Files
 
-## Merge Behavior
+#### Rule Files
+Write selected rules to `.plaited/rules/` using content from `templates[ruleId].content`.
 
-**Always scans existing rules first.** When existing rules are found:
+#### Config Files (Marker-Based Updates)
 
-1. **Analyze overlap** - Identify sections covering same topics
-2. **Propose merge** - Show what would be added/changed
-3. **User approval** - Ask before modifying:
-   - Keep existing (skip new content)
-   - Merge (add missing sections)
-   - Replace entirely
+For CLAUDE.md and AGENTS.md:
 
-This ensures the command never overwrites user customizations without consent.
+1. Read existing file (or empty if missing)
+2. Find markers: `<!-- PLAITED-RULES-START -->` and `<!-- PLAITED-RULES-END -->`
+3. Update:
+   - **Markers exist**: Replace content between markers (inclusive)
+   - **No markers**: Append section to end of file
+   - **No file**: Create with section content
 
-## Agent Adaptations
+Write:
+- `claudeMdSection` → CLAUDE.md (uses `@.plaited/rules/` syntax)
+- `agentsMdSection` → AGENTS.md (uses markdown links)
 
-Content is adapted based on agent capabilities:
+### Step 5: Output Summary
 
-- **Sandbox awareness**: Include/exclude sandbox workarounds based on agent
-- **Tool references**: Adjust tool names (e.g., "Bash tool" → "terminal")
-- **Format**: Single file vs multi-file based on agent convention
-- **Length**: Condense for agents with size limits
+Report what was created/updated.
 
-## Usage
+## CLI Options
 
-Run the `/scaffold-rules` command to interactively scaffold rules, or invoke when user asks about:
-- "Set up coding conventions"
-- "Configure my AI agent"
-- "Add development rules"
-- "What rules should I have?"
+```bash
+# All rules to .plaited/rules/
+bunx @plaited/development-skills scaffold-rules
+
+# List available rules (useful for discovery)
+bunx @plaited/development-skills scaffold-rules --list
+
+# Filter specific rules
+bunx @plaited/development-skills scaffold-rules --rules <id> --rules <id>
+
+# Custom directory
+bunx @plaited/development-skills scaffold-rules --rules-dir=custom/rules
+```
+
+**Note:** Invalid rule names in `--rules` will produce a warning with available rule IDs.
+
+## Rules Directory Convention
+
+| Directory | Purpose | Scope |
+|-----------|---------|-------|
+| `.plaited/rules/` | Shared rules from scaffold-rules | Cross-agent (Claude, Cursor, Copilot, etc.) |
+| `.claude/rules/` | Claude Code-specific overrides | Claude Code only |
+| `.cursor/rules/` | Cursor-specific overrides | Cursor only |
+
+**How it works:**
+- `.plaited/rules/` contains shared rules - referenced by both CLAUDE.md and AGENTS.md
+- Agent-specific directories can override or extend shared rules for that agent only
+- When scaffolding, always write to `.plaited/rules/` unless user specifies `--rules-dir`
+
+## Related Skills
+
+- **validate-skill** - Validate skill directories against AgentSkills spec

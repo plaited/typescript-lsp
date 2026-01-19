@@ -71,7 +71,7 @@ export const lspRefs = async (args: string[]) => {
 
     console.log(JSON.stringify(result, null, 2))
   } catch (error) {
-    console.error(`Error: ${error}`)
+    console.error('Error:', error)
     await client.stop()
     process.exit(1)
   }
