@@ -1,153 +1,69 @@
-# development-skills
+# @plaited/development-skills
 
 [![npm version](https://img.shields.io/npm/v/@plaited/development-skills.svg)](https://www.npmjs.com/package/@plaited/development-skills)
 [![CI](https://github.com/plaited/acp-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/plaited/development-skills/actions/workflows/ci.yml)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 
+ > TypeScript LSP tools and AI agent skills for modern development workflows
 
-TypeScript LSP, code documentation, and validation tools. Available as both a CLI tool and as installable skills for AI coding agents.
-
-## CLI Tool
-
-Use these tools directly via the CLI without installation:
+## Examples
 
 ```bash
-# Run without installing
-bunx @plaited/development-skills lsp-hover src/index.ts 10 5
-
-# Or install globally
-bun add -g @plaited/development-skills
-development-skills lsp-find parseConfig
-```
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `lsp-hover <file> <line> <char>` | Get type information at position |
-| `lsp-find <query> [file]` | Search for symbols across workspace |
-| `lsp-refs <file> <line> <char>` | Find all references to symbol |
-| `lsp-analyze <file> [options]` | Batch analysis of file |
-| `validate-skill <path>` | Validate AgentSkills spec |
-
-### Examples
-
-```bash
-# Type information
-bunx @plaited/development-skills lsp-hover src/app.ts 25 10
-
-# Symbol search
+# Find where a type is defined
 bunx @plaited/development-skills lsp-find UserConfig
 
-# Find references
-bunx @plaited/development-skills lsp-refs src/types.ts 15 8
+# Get type info at cursor position (line 25, column 10)
+bunx @plaited/development-skills lsp-hover src/app.ts 25 10
 
-# Module analysis
-bunx @plaited/development-skills lsp-analyze src/index.ts --all
+# Find all usages of a symbol
+bunx @plaited/development-skills lsp-refs src/types.ts 15 12
 
-# Validate skills
+# Validate your AI agent skills
 bunx @plaited/development-skills validate-skill .claude/skills
+
+# Scaffold development rules for your project
+bunx @plaited/development-skills scaffold-rules
 ```
 
-## Skills for AI Agents
+## Why LSP?
 
-**Install skills** for use with AI coding agents:
+Text search finds strings. LSP finds *meaning*.
+
+```bash
+# Text search: finds "Config" in comments, strings, everywhere
+grep -r "Config" src/
+
+# LSP search: finds the actual Config type and its usages
+bunx @plaited/development-skills lsp-find Config
+```
+
+LSP understands re-exports, aliases, and type relationships.
+
+## Install for AI Agents
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/plaited/skills-installer/main/install.sh | bash -s -- --agent <agent-name> --project development-skills
 ```
 
-Replace `<agent-name>` with your agent: `claude`, `cursor`, `copilot`, `opencode`, `amp`, `goose`, `factory`
+**Agents:** `claude` · `cursor` · `copilot` · `codex` · `gemini` · `windsurf` · `opencode` · `amp` · `goose` · `factory`
 
-**Update skills:**
+## Commands
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/plaited/skills-installer/main/install.sh | bash -s -- update --agent <agent-name> --project development-skills
-```
+| Command | What it does |
+|---------|--------------|
+| `lsp-hover` | Type info at position |
+| `lsp-find` | Symbol search |
+| `lsp-refs` | Find references |
+| `lsp-analyze` | Batch file analysis |
+| `validate-skill` | Validate AgentSkills |
+| `scaffold-rules` | Scaffold dev rules |
 
-### Available Skills
+## Skills Included
 
-### TypeScript LSP
-
-TypeScript Language Server Protocol integration for exploring and understanding TypeScript/JavaScript codebases.
-
-**Use LSP over Grep/Glob when:**
-- Finding all usages of a function/type (LSP understands re-exports, aliases)
-- Searching for symbols by name (LSP ignores strings, comments)
-- Understanding file exports (LSP resolves re-exports)
-- Getting type signatures (not possible with grep)
-
-#### Commands
-
-##### `/lsp-hover`
-
-Get type information at a specific position.
-
-```bash
-/lsp-hover src/utils/parser.ts 42 10
-```
-
-##### `/lsp-find`
-
-Search for symbols across the workspace.
-
-```bash
-/lsp-find parseConfig
-/lsp-find validateInput src/lib/validator.ts
-```
-
-##### `/lsp-refs`
-
-Find all references to a symbol (before refactoring).
-
-```bash
-/lsp-refs src/utils/parser.ts 42 10
-```
-
-##### `/lsp-analyze`
-
-Batch analysis of a file.
-
-```bash
-/lsp-analyze src/utils/parser.ts --exports
-/lsp-analyze src/utils/parser.ts --all
-/lsp-analyze src/utils/parser.ts --hover 50:10 --refs 60:5
-```
-
-#### Path Resolution
-
-All commands accept:
-- **Absolute paths**: `/Users/name/project/src/file.ts`
-- **Relative paths**: `./src/file.ts`
-- **Package export paths**: `my-package/src/module.ts` (resolved via `Bun.resolve()`)
-
-### Skill Validation
-
-Validate skill directories against the AgentSkills specification.
-
-#### Commands
-
-##### `/validate-skill`
-
-Validate skill directories.
-
-```bash
-/validate-skill .claude/skills
-/validate-skill .claude/skills/typescript-lsp
-```
-
-## Development
-
-```bash
-# Install dependencies
-bun install
-
-# Run checks
-bun run check
-
-# Run tests
-bun test
-```
+- **typescript-lsp** - LSP integration for AI agents
+- **code-documentation** - TSDoc workflow and standards
+- **validate-skill** - Skill validation
+- **scaffold-rules** - Development rules scaffolding
 
 ## License
 
