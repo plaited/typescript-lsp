@@ -212,6 +212,38 @@ describe('scaffold-rules', () => {
     })
   })
 
+  describe('symlink readability', () => {
+    test('rules are readable through .claude symlink', async () => {
+      await mkdir(join(testDir, '.claude'), { recursive: true })
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      // Read through symlink path
+      const content = await Bun.file(join(testDir, '.claude/rules/core.md')).text()
+      expect(content).toContain('# Core Conventions')
+    })
+
+    test('rules are readable through .cursor symlink', async () => {
+      await mkdir(join(testDir, '.cursor'), { recursive: true })
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      // Read through symlink path
+      const content = await Bun.file(join(testDir, '.cursor/rules/core.md')).text()
+      expect(content).toContain('# Core Conventions')
+    })
+  })
+
+  describe('error handling', () => {
+    test('fails when existing file blocks symlink creation', async () => {
+      await mkdir(join(testDir, '.claude'), { recursive: true })
+      // Create a file where symlink should go
+      await Bun.write(join(testDir, '.claude/rules'), 'not a directory')
+
+      // Should fail when trying to create symlink over existing file
+      const result = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules 2>&1`.nothrow().text()
+      expect(result).toContain('EEXIST')
+    })
+  })
+
   describe('rule content', () => {
     test('core.md contains TypeScript conventions', async () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()

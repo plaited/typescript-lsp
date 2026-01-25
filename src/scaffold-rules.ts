@@ -6,12 +6,9 @@
  * creates symlinks for `.claude/` and `.cursor/` agent directories,
  * and falls back to appending links in `AGENTS.md` if no agent dirs exist.
  *
- * @example
- * ```bash
- * bunx @plaited/development-skills scaffold-rules
- * bunx @plaited/development-skills scaffold-rules --list
- * bunx @plaited/development-skills scaffold-rules --dry-run
- * ```
+ * @throws When source rules directory cannot be read
+ * @throws When target directory cannot be created (permissions)
+ * @throws When symlink creation fails (existing file, not directory)
  */
 
 import { mkdir, readdir, readlink, stat, symlink } from 'node:fs/promises'
@@ -26,6 +23,12 @@ const ALL_AGENTS = ['.plaited', ...SYMLINK_AGENTS] as const
 
 /** Canonical rules location */
 const TARGET_RULES = '.plaited/rules' as const
+
+/**
+ * NOTE: This tool only scaffolds RULES, not skills.
+ * Skills symlinks (.claude/skills -> ../.plaited/skills) are managed separately
+ * via the skills-installer or manual setup.
+ */
 
 /**
  * Check if path is a directory
@@ -72,10 +75,11 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
   const actions: string[] = []
 
   // Check for agent directories BEFORE copying (since copy creates .plaited/)
-  let hasAgentDir = false
+  // This determines whether to fall back to AGENTS.md append
+  let hadAgentDirBeforeScaffold = false
   for (const agent of ALL_AGENTS) {
     if (await isDirectory(join(cwd, agent))) {
-      hasAgentDir = true
+      hadAgentDirBeforeScaffold = true
       break
     }
   }
@@ -120,7 +124,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
   }
 
   // 3. Fallback: append to AGENTS.md only if NO agent directories existed before copy
-  if (!hasAgentDir) {
+  if (!hadAgentDirBeforeScaffold) {
     const agentsMdPath = join(cwd, 'AGENTS.md')
     const agentsMd = Bun.file(agentsMdPath)
 
