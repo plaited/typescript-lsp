@@ -28,36 +28,6 @@ bun run check:write
 bun test
 ```
 
-<!-- PLAITED-RULES-START -->
-
-## Rules
-
-This project uses modular development rules stored in `.plaited/rules/`.
-Each rule file covers a specific topic:
-
-- @.plaited/rules/module-organization.md - [module-organization](.plaited/rules/module-organization.md)
-- @.plaited/rules/git-workflow.md - [git-workflow](.plaited/rules/git-workflow.md)
-- @.plaited/rules/github.md - [github](.plaited/rules/github.md)
-- @.plaited/rules/testing.md - [testing](.plaited/rules/testing.md)
-- @.plaited/rules/bun-apis.md - [bun-apis](.plaited/rules/bun-apis.md)
-- @.plaited/rules/accuracy.md - [accuracy](.plaited/rules/accuracy.md)
-- @.plaited/rules/code-review.md - [code-review](.plaited/rules/code-review.md)
-
-<!-- PLAITED-RULES-END -->
-
-### Rules Directory Convention
-
-| Directory | Purpose | Scope |
-|-----------|---------|-------|
-| `.plaited/rules/` | Shared rules from scaffold-rules | Cross-agent (Claude, Cursor, Copilot, etc.) |
-| `.claude/rules/` | Claude Code-specific overrides | Claude Code only |
-| `.cursor/rules/` | Cursor-specific overrides | Cursor only |
-
-**How it works:**
-- `.plaited/rules/` contains rules scaffolded via `scaffold-rules` skill - shared across all agents
-- Agent-specific directories (`.claude/rules/`, `.cursor/rules/`) can override or extend shared rules
-- AGENTS.md is the single source of truth; CLAUDE.md references it via `@AGENTS.md`
-
 ## Quick Reference
 
 ### Package Overview
