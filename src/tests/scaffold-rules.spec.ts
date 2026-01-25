@@ -1,415 +1,250 @@
-import { describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { mkdir, readlink, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { $ } from 'bun'
 
-type Template = {
-  filename: string
-  content: string
-  description: string
+type ListOutput = {
+  rules: string[]
 }
 
 type ScaffoldOutput = {
-  rulesPath: string
-  agentsMdSection: string
-  claudeMdReference: string
-  templates: Record<string, Template>
+  dryRun: boolean
+  targetRules: string
+  actions: string[]
 }
 
 const binDir = join(import.meta.dir, '../../bin')
 
 describe('scaffold-rules', () => {
-  test('outputs JSON with all templates', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+  let testDir: string
 
-    expect(result).toHaveProperty('templates')
-    expect(result.templates).toBeObject()
-
-    // Check that we have the expected templates
-    const templateKeys = Object.keys(result.templates)
-    expect(templateKeys).toContain('accuracy')
-    expect(templateKeys).toContain('bun-apis')
-    expect(templateKeys).toContain('code-review')
-    expect(templateKeys).toContain('git-workflow')
-    expect(templateKeys).toContain('github')
-    expect(templateKeys).toContain('testing')
-    expect(templateKeys).toContain('module-organization')
+  beforeEach(async () => {
+    // Create a temp directory for each test
+    testDir = join(import.meta.dir, `test-scaffold-${Date.now()}`)
+    await mkdir(testDir, { recursive: true })
   })
 
-  test('each template has required properties', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-    for (const [ruleId, template] of Object.entries(result.templates)) {
-      expect(template).toHaveProperty('filename')
-      expect(template).toHaveProperty('content')
-      expect(template).toHaveProperty('description')
-
-      expect(template.filename).toBe(`${ruleId}.md`)
-      expect(template.content).toBeString()
-      expect(template.content.length).toBeGreaterThan(0)
-    }
-  })
-
-  test('removes template headers from content', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-    // Check that template headers are removed
-    for (const template of Object.values(result.templates)) {
-      expect(template.content).not.toContain('<!-- RULE TEMPLATE')
-      expect(template.content).not.toContain('Variables:')
-    }
-  })
-
-  test('processes development-skills conditionals', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-    const accuracy = result.templates.accuracy
-    expect(accuracy).toBeDefined()
-
-    // Should include development-skills content (always true when using CLI)
-    expect(accuracy!.content).toContain('TypeScript/JavaScript projects')
-    expect(accuracy!.content).toContain('lsp-find')
-    expect(accuracy!.content).toContain('lsp-hover')
-
-    // Should not have conditional syntax
-    expect(accuracy!.content).not.toContain('{{#if development-skills}}')
-    expect(accuracy!.content).not.toContain('{{/if}}')
-  })
-
-  test('filters to specific rules when requested', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules testing --rules bun-apis`.json()
-
-    const templateKeys = Object.keys(result.templates)
-
-    // Should only include requested rules
-    expect(templateKeys).toHaveLength(2)
-    expect(templateKeys).toContain('testing')
-    expect(templateKeys).toContain('bun-apis')
-
-    // Should not include other rules
-    expect(templateKeys).not.toContain('accuracy')
-    expect(templateKeys).not.toContain('git-workflow')
-  })
-
-  test('extracts meaningful descriptions', async () => {
-    const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-    // Check a few descriptions
-    const accuracy = result.templates.accuracy
-    expect(accuracy).toBeDefined()
-    expect(accuracy!.description).toBeString()
-    expect(accuracy!.description.length).toBeGreaterThan(10)
-
-    const testing = result.templates.testing
-    expect(testing).toBeDefined()
-    expect(testing!.description).toBeString()
-    expect(testing!.description.length).toBeGreaterThan(10)
-  })
-
-  test('handles missing bundled rules directory gracefully', async () => {
-    // This test ensures the script fails gracefully if templates are missing
-    // In production, .plaited/rules/ should always be bundled with the package
-    const result = await $`bun ${binDir}/cli.ts scaffold-rules`.nothrow().quiet()
-
-    // Should succeed because .plaited/rules/ exists in development
-    expect(result.exitCode).toBe(0)
-  })
-
-  describe('output structure', () => {
-    test('defaults to .plaited/rules path', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      expect(result.rulesPath).toBe('.plaited/rules')
-    })
-
-    test('includes claudeMdReference with markers and @AGENTS.md', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      expect(result.claudeMdReference).toContain('<!-- PLAITED-RULES-START -->')
-      expect(result.claudeMdReference).toContain('<!-- PLAITED-RULES-END -->')
-      expect(result.claudeMdReference).toContain('@AGENTS.md')
-      expect(result.claudeMdReference).toContain('## Project Rules')
-    })
-
-    test('includes agentsMdSection with markers and dual format', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-START -->')
-      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-END -->')
-      // Should have @ syntax for Claude Code
-      expect(result.agentsMdSection).toContain('@.plaited/rules/')
-      // Should have markdown links for other tools
-      expect(result.agentsMdSection).toContain('](.plaited/rules/')
-      expect(result.agentsMdSection).toContain('## Rules')
-    })
-
-    test('claudeMdReference does not list individual rules', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      // claudeMdReference should be a simple reference to AGENTS.md, not a list of rules
-      expect(result.claudeMdReference).not.toContain('.plaited/rules/')
-      expect(result.claudeMdReference).toContain('@AGENTS.md')
-    })
-
-    test('agentsMdSection lists all selected rules in dual format', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      for (const [ruleId, template] of Object.entries(result.templates)) {
-        // Each rule should have both @ syntax and markdown link
-        expect(result.agentsMdSection).toContain(`@.plaited/rules/${template.filename}`)
-        expect(result.agentsMdSection).toContain(`[${ruleId}](.plaited/rules/${template.filename})`)
-      }
-    })
-  })
-
-  describe('claudeMdReference behavior', () => {
-    test('has exact expected content structure', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      // Verify the exact structure of claudeMdReference
-      const lines = result.claudeMdReference.split('\n')
-      expect(lines[0]).toBe('<!-- PLAITED-RULES-START -->')
-      expect(lines[1]).toBe('')
-      expect(lines[2]).toBe('## Project Rules')
-      expect(lines[3]).toBe('')
-      expect(lines[4]).toBe('See @AGENTS.md for shared development rules.')
-      expect(lines[5]).toBe('')
-      expect(lines[6]).toBe('<!-- PLAITED-RULES-END -->')
-    })
-
-    test('is constant regardless of rules selected', async () => {
-      const allRules: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-      const oneRule: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules testing`.json()
-      const twoRules: ScaffoldOutput =
-        await $`bun ${binDir}/cli.ts scaffold-rules --rules testing --rules accuracy`.json()
-
-      // claudeMdReference should be identical in all cases
-      expect(oneRule.claudeMdReference).toBe(allRules.claudeMdReference)
-      expect(twoRules.claudeMdReference).toBe(allRules.claudeMdReference)
-    })
-
-    test('is constant regardless of rules-dir', async () => {
-      const defaultPath: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-      const customPath: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
-      const anotherPath: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=custom/path`.json()
-
-      // claudeMdReference should be identical regardless of rules-dir
-      expect(customPath.claudeMdReference).toBe(defaultPath.claudeMdReference)
-      expect(anotherPath.claudeMdReference).toBe(defaultPath.claudeMdReference)
-    })
-
-    test('uses shared markers with agentsMdSection', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      // Both sections should use the same markers for consistency
-      const startMarker = '<!-- PLAITED-RULES-START -->'
-      const endMarker = '<!-- PLAITED-RULES-END -->'
-
-      expect(result.claudeMdReference).toContain(startMarker)
-      expect(result.claudeMdReference).toContain(endMarker)
-      expect(result.agentsMdSection).toContain(startMarker)
-      expect(result.agentsMdSection).toContain(endMarker)
-    })
-  })
-
-  describe('agentsMdSection with filtered rules', () => {
-    test('only includes selected rules in dual format', async () => {
-      const result: ScaffoldOutput =
-        await $`bun ${binDir}/cli.ts scaffold-rules --rules testing --rules bun-apis`.json()
-
-      // Should contain selected rules (both @ and markdown formats)
-      expect(result.agentsMdSection).toContain('@.plaited/rules/testing.md')
-      expect(result.agentsMdSection).toContain('[testing]')
-      expect(result.agentsMdSection).toContain('@.plaited/rules/bun-apis.md')
-      expect(result.agentsMdSection).toContain('[bun-apis]')
-
-      // Should NOT contain other rules
-      expect(result.agentsMdSection).not.toContain('@.plaited/rules/accuracy.md')
-      expect(result.agentsMdSection).not.toContain('[accuracy]')
-      expect(result.agentsMdSection).not.toContain('@.plaited/rules/git-workflow.md')
-    })
-
-    test('has valid structure with single rule in dual format', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules testing`.json()
-
-      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-START -->')
-      expect(result.agentsMdSection).toContain('## Rules')
-      // Both formats present
-      expect(result.agentsMdSection).toContain('@.plaited/rules/testing.md')
-      expect(result.agentsMdSection).toContain('[testing](.plaited/rules/testing.md)')
-      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-END -->')
-    })
-
-    test('has empty rules list when no rules match', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules nonexistent`.nothrow().json()
-
-      // Should still have valid structure with markers
-      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-START -->')
-      expect(result.agentsMdSection).toContain('## Rules')
-      expect(result.agentsMdSection).toContain('<!-- PLAITED-RULES-END -->')
-
-      // But no rule references (neither @ nor markdown)
-      expect(result.agentsMdSection).not.toMatch(/@\.plaited\/rules\/.*\.md/)
-      expect(result.agentsMdSection).not.toMatch(/\[.*\]\(\.plaited\/rules\/.*\.md\)/)
-    })
-  })
-
-  describe('template content', () => {
-    test('git-workflow uses standard commit format', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      const gitWorkflow = result.templates['git-workflow']
-      expect(gitWorkflow).toBeDefined()
-      expect(gitWorkflow!.content).toContain('multi-line commit')
-      expect(gitWorkflow!.content).toContain('git commit -m')
-    })
-
-    test('accuracy uses CLI syntax for LSP tools', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      const accuracy = result.templates.accuracy
-      expect(accuracy).toBeDefined()
-
-      // Should use CLI syntax
-      expect(accuracy!.content).toContain('bunx @plaited/development-skills lsp-')
-    })
-
-    test('cross-references use path syntax', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
-
-      const accuracy = result.templates.accuracy
-      expect(accuracy).toBeDefined()
-      expect(accuracy!.content).toContain('.plaited/rules/testing.md')
-      expect(accuracy!.content).not.toContain('{{LINK:testing}}')
-    })
-  })
-
-  describe('path customization', () => {
-    test('--rules-dir overrides default rules path', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
-
-      expect(result.rulesPath).toBe('.cursor/rules')
-    })
-
-    test('claudeMdReference is path-independent', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
-
-      // claudeMdReference always references AGENTS.md regardless of rules path
-      expect(result.claudeMdReference).toContain('@AGENTS.md')
-      expect(result.claudeMdReference).not.toContain('.cursor/rules')
-    })
-
-    test('agentsMdSection uses custom path in both formats', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.cursor/rules`.json()
-
-      // Both @ syntax and markdown links should use custom path
-      expect(result.agentsMdSection).toContain('@.cursor/rules/')
-      expect(result.agentsMdSection).toContain('](.cursor/rules/')
-      expect(result.agentsMdSection).not.toContain('.plaited/rules/')
-    })
-
-    test('cross-references use custom rules-dir', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules-dir=.factory/rules`.json()
-
-      const accuracy = result.templates.accuracy
-      expect(accuracy).toBeDefined()
-      expect(accuracy!.content).toContain('.factory/rules/testing.md')
-    })
-
-    test('short flag -d works', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules -d custom/rules`.json()
-
-      expect(result.rulesPath).toBe('custom/rules')
-    })
+  afterEach(async () => {
+    // Clean up temp directory
+    await rm(testDir, { recursive: true, force: true })
   })
 
   describe('--list flag', () => {
-    test('outputs array of available rules', async () => {
-      const result = await $`bun ${binDir}/cli.ts scaffold-rules --list`.json()
+    test('outputs available rules as JSON', async () => {
+      const result: ListOutput = await $`bun ${binDir}/cli.ts scaffold-rules --list`.json()
 
-      expect(result).toBeArray()
-      expect(result.length).toBeGreaterThan(0)
-
-      // Each entry should have id and filename
-      for (const rule of result) {
-        expect(rule).toHaveProperty('id')
-        expect(rule).toHaveProperty('filename')
-        expect(rule.filename).toBe(`${rule.id}.md`)
-      }
+      expect(result).toHaveProperty('rules')
+      expect(result.rules).toBeArray()
+      expect(result.rules.length).toBeGreaterThan(0)
     })
 
-    test('includes expected rules', async () => {
-      const result = await $`bun ${binDir}/cli.ts scaffold-rules --list`.json()
-      const ids = result.map((r: { id: string }) => r.id)
+    test('includes expected compressed rules', async () => {
+      const result: ListOutput = await $`bun ${binDir}/cli.ts scaffold-rules --list`.json()
 
-      expect(ids).toContain('accuracy')
-      expect(ids).toContain('testing')
-      expect(ids).toContain('bun-apis')
+      expect(result.rules).toContain('accuracy')
+      expect(result.rules).toContain('bun')
+      expect(result.rules).toContain('core')
+      expect(result.rules).toContain('documentation')
+      expect(result.rules).toContain('modules')
+      expect(result.rules).toContain('testing')
+      expect(result.rules).toContain('workflow')
     })
 
     test('short flag -l works', async () => {
-      const result = await $`bun ${binDir}/cli.ts scaffold-rules -l`.json()
+      const result: ListOutput = await $`bun ${binDir}/cli.ts scaffold-rules -l`.json()
 
-      expect(result).toBeArray()
-      expect(result.length).toBeGreaterThan(0)
+      expect(result).toHaveProperty('rules')
+      expect(result.rules).toBeArray()
     })
   })
 
-  describe('--rules validation', () => {
-    test('warns about unknown rules', async () => {
-      const result = await $`bun ${binDir}/cli.ts scaffold-rules --rules nonexistent --rules testing`.nothrow()
+  describe('--dry-run flag', () => {
+    test('outputs planned actions without executing', async () => {
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules --dry-run`.json()
 
-      // Should still succeed but with warning
-      expect(result.exitCode).toBe(0)
-      expect(result.stderr.toString()).toContain('Warning: Unknown rules: nonexistent')
+      expect(result.dryRun).toBe(true)
+      expect(result.targetRules).toBe('.plaited/rules')
+      expect(result.actions).toBeArray()
     })
 
-    test('shows available rules in warning', async () => {
-      const result = await $`bun ${binDir}/cli.ts scaffold-rules --rules fake-rule`.nothrow()
+    test('shows copy actions for each rule', async () => {
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules --dry-run`.json()
 
-      expect(result.stderr.toString()).toContain('Available rules:')
-      expect(result.stderr.toString()).toContain('testing')
+      const copyActions = result.actions.filter((a) => a.startsWith('copy:'))
+      expect(copyActions.length).toBeGreaterThan(0)
+
+      // Should include our compressed rules
+      expect(copyActions.some((a) => a.includes('core.md'))).toBe(true)
+      expect(copyActions.some((a) => a.includes('testing.md'))).toBe(true)
+    })
+
+    test('does not create files in dry-run mode', async () => {
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules --dry-run`.json()
+
+      const rulesDir = Bun.file(join(testDir, '.plaited/rules'))
+      expect(await rulesDir.exists()).toBe(false)
+    })
+
+    test('short flag -n works', async () => {
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules -n`.json()
+
+      expect(result.dryRun).toBe(true)
     })
   })
 
-  describe('edge cases', () => {
-    test('handles all rules filtered out gracefully', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules nonexistent`.nothrow().json()
+  describe('copy behavior', () => {
+    test('copies rules to .plaited/rules/', async () => {
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      // Should return valid output with empty templates
-      expect(result.templates).toEqual({})
-      expect(result.claudeMdReference).toContain('<!-- PLAITED-RULES-START -->')
-      expect(result.claudeMdReference).toContain('<!-- PLAITED-RULES-END -->')
+      const coreRule = Bun.file(join(testDir, '.plaited/rules/core.md'))
+      expect(await coreRule.exists()).toBe(true)
+
+      const content = await coreRule.text()
+      expect(content).toContain('# Core Conventions')
     })
 
-    test('description extraction falls back for heading-only content', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+    test('copies all compressed rules', async () => {
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      // All templates should have non-empty descriptions
-      for (const template of Object.values(result.templates)) {
-        expect(template.description).toBeTruthy()
-        expect(template.description.length).toBeGreaterThan(0)
+      const expectedRules = ['accuracy', 'bun', 'core', 'documentation', 'modules', 'testing', 'workflow']
+
+      for (const rule of expectedRules) {
+        const ruleFile = Bun.file(join(testDir, `.plaited/rules/${rule}.md`))
+        expect(await ruleFile.exists()).toBe(true)
       }
     })
 
-    test('processes nested conditionals correctly', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules --rules accuracy`.json()
+    test('creates .plaited/rules directory if missing', async () => {
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      const accuracy = result.templates.accuracy
-      expect(accuracy).toBeDefined()
+      const rulesDir = await Bun.file(join(testDir, '.plaited/rules/core.md')).exists()
+      expect(rulesDir).toBe(true)
+    })
+  })
 
-      // Should not contain any unprocessed conditional syntax
-      expect(accuracy!.content).not.toContain('{{#if')
-      expect(accuracy!.content).not.toContain('{{^if')
-      expect(accuracy!.content).not.toContain('{{/if}}')
+  describe('symlink behavior', () => {
+    test('creates symlink for .claude/rules when .claude exists', async () => {
+      // Create .claude directory
+      await mkdir(join(testDir, '.claude'), { recursive: true })
+
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      // Check symlink exists and points to right place
+      const linkTarget = await readlink(join(testDir, '.claude/rules'))
+      expect(linkTarget).toBe('../.plaited/rules')
     })
 
-    test('template content has no excessive blank lines', async () => {
-      const result: ScaffoldOutput = await $`bun ${binDir}/cli.ts scaffold-rules`.json()
+    test('creates symlink for .cursor/rules when .cursor exists', async () => {
+      // Create .cursor directory
+      await mkdir(join(testDir, '.cursor'), { recursive: true })
 
-      for (const template of Object.values(result.templates)) {
-        // Should not have 3+ consecutive newlines
-        expect(template.content).not.toMatch(/\n{3,}/)
-      }
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      const linkTarget = await readlink(join(testDir, '.cursor/rules'))
+      expect(linkTarget).toBe('../.plaited/rules')
+    })
+
+    test('skips symlink if already exists with correct target', async () => {
+      await mkdir(join(testDir, '.claude'), { recursive: true })
+
+      // Run twice
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      // Second run should skip the symlink
+      const skipAction = result.actions.find((a) => a.includes('.claude/rules') && a.includes('skip'))
+      expect(skipAction).toBeDefined()
+    })
+
+    test('does not create symlink if agent dir does not exist', async () => {
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      // Should not have any symlink actions
+      const symlinkActions = result.actions.filter((a) => a.startsWith('symlink:'))
+      expect(symlinkActions.length).toBe(0)
+    })
+  })
+
+  describe('AGENTS.md fallback', () => {
+    test('appends rules to AGENTS.md when no agent dirs exist', async () => {
+      // Create AGENTS.md without any agent directories
+      await Bun.write(join(testDir, 'AGENTS.md'), '# AGENTS\n\nSome content\n')
+
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      const content = await Bun.file(join(testDir, 'AGENTS.md')).text()
+      expect(content).toContain('## Rules')
+      expect(content).toContain('.plaited/rules/')
+    })
+
+    test('does not append if agent dir exists', async () => {
+      await Bun.write(join(testDir, 'AGENTS.md'), '# AGENTS\n\nSome content\n')
+      await mkdir(join(testDir, '.plaited'), { recursive: true })
+
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      const content = await Bun.file(join(testDir, 'AGENTS.md')).text()
+      // Should not have appended rules section (since .plaited exists)
+      expect(content).not.toContain('## Rules')
+    })
+
+    test('skips if AGENTS.md already has rules', async () => {
+      await Bun.write(join(testDir, 'AGENTS.md'), '# AGENTS\n\nSee .plaited/rules/ for rules\n')
+
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      const skipAction = result.actions.find((a) => a.includes('AGENTS.md') && a.includes('skip'))
+      expect(skipAction).toBeDefined()
+    })
+  })
+
+  describe('output structure', () => {
+    test('returns JSON with expected fields', async () => {
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      expect(result).toHaveProperty('dryRun')
+      expect(result).toHaveProperty('targetRules')
+      expect(result).toHaveProperty('actions')
+
+      expect(result.dryRun).toBe(false)
+      expect(result.targetRules).toBe('.plaited/rules')
+      expect(result.actions).toBeArray()
+    })
+  })
+
+  describe('rule content', () => {
+    test('core.md contains TypeScript conventions', async () => {
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      const content = await Bun.file(join(testDir, '.plaited/rules/core.md')).text()
+      expect(content).toContain('Type over interface')
+      expect(content).toContain('Arrow functions')
+    })
+
+    test('testing.md contains test conventions', async () => {
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      const content = await Bun.file(join(testDir, '.plaited/rules/testing.md')).text()
+      expect(content).toContain('test not it')
+      expect(content).toContain('No conditional assertions')
+    })
+
+    test('rules include verification patterns', async () => {
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      const content = await Bun.file(join(testDir, '.plaited/rules/core.md')).text()
+      expect(content).toContain('*Verify:*')
+      expect(content).toContain('*Fix:*')
+    })
+
+    test('rules are compressed (no verbose examples)', async () => {
+      await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
+
+      const content = await Bun.file(join(testDir, '.plaited/rules/core.md')).text()
+
+      // Should not have verbose code blocks with Good/Avoid patterns
+      expect(content).not.toContain('// ✅ Good')
+      expect(content).not.toContain('// ❌ Avoid')
     })
   })
 })
