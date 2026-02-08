@@ -16,12 +16,12 @@
 ```
 bin/cli.ts              # CLI entry point
 src/                    # TypeScript source
-.plaited/skills/        # Agent skills
-.plaited/rules/         # Shared rules (bundled)
+.agents/skills/        # Agent skills
+.agents/rules/         # Shared rules (bundled)
 ```
 
 **Test CLI:** `bun bin/cli.ts <command>`  
-**Install skills:** `curl -fsSL https://raw.githubusercontent.com/plaited/skills-installer/main/install.sh | bash -s -- --agent <agent> --project development-skills`
+**Install skills:** `npx skills add plaited/development-skills` or `bunx skills add plaited/development-skills`
 
 ## Commands
 
@@ -38,7 +38,7 @@ After code changes:
 1. `bun run check` - Must pass
 2. `bun test` - Must pass  
 3. `bun bin/cli.ts <cmd>` - Test CLI changes
-4. For skills: `bunx @plaited/development-skills validate-skill .plaited/skills`
+4. For skills: `bunx @plaited/development-skills validate-skill .agents/skills`
 
 **Rule compliance:** Read rules below, use verification patterns to self-check
 
@@ -59,13 +59,13 @@ After code changes:
 
 Compressed rules with embedded verification patterns:
 
-- @.plaited/rules/core.md - TypeScript conventions (type>interface, no any, arrow fns)
-- @.plaited/rules/testing.md - Test patterns (test>it, no conditional assertions)
-- @.plaited/rules/modules.md - Module organization (no index.ts, explicit .ts)
-- @.plaited/rules/workflow.md - Git + GitHub CLI patterns
-- @.plaited/rules/bun.md - Bun APIs over Node.js
-- @.plaited/rules/accuracy.md - 95% confidence, verify before stating
-- @.plaited/rules/documentation.md - TSDoc standards
+- @.agents/rules/core.md - TypeScript conventions (type>interface, no any, arrow fns)
+- @.agents/rules/testing.md - Test patterns (test>it, no conditional assertions)
+- @.agents/rules/modules.md - Module organization (no index.ts, explicit .ts)
+- @.agents/rules/workflow.md - Git + GitHub CLI patterns
+- @.agents/rules/bun.md - Bun APIs over Node.js
+- @.agents/rules/accuracy.md - 95% confidence, verify before stating
+- @.agents/rules/documentation.md - TSDoc standards
 
 <!-- PLAITED-RULES-END -->
 

@@ -63,7 +63,7 @@ describe('scaffold-rules', () => {
       const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules --dry-run`.json()
 
       expect(result.dryRun).toBe(true)
-      expect(result.targetRules).toBe('.plaited/rules')
+      expect(result.targetRules).toBe('.agents/rules')
       expect(result.actions).toBeArray()
     })
 
@@ -81,7 +81,7 @@ describe('scaffold-rules', () => {
     test('does not create files in dry-run mode', async () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules --dry-run`.json()
 
-      const rulesDir = Bun.file(join(testDir, '.plaited/rules'))
+      const rulesDir = Bun.file(join(testDir, '.agents/rules'))
       expect(await rulesDir.exists()).toBe(false)
     })
 
@@ -93,10 +93,10 @@ describe('scaffold-rules', () => {
   })
 
   describe('copy behavior', () => {
-    test('copies rules to .plaited/rules/', async () => {
+    test('copies rules to .agents/rules/', async () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      const coreRule = Bun.file(join(testDir, '.plaited/rules/core.md'))
+      const coreRule = Bun.file(join(testDir, '.agents/rules/core.md'))
       expect(await coreRule.exists()).toBe(true)
 
       const content = await coreRule.text()
@@ -109,15 +109,15 @@ describe('scaffold-rules', () => {
       const expectedRules = ['accuracy', 'bun', 'core', 'documentation', 'modules', 'testing', 'workflow']
 
       for (const rule of expectedRules) {
-        const ruleFile = Bun.file(join(testDir, `.plaited/rules/${rule}.md`))
+        const ruleFile = Bun.file(join(testDir, `.agents/rules/${rule}.md`))
         expect(await ruleFile.exists()).toBe(true)
       }
     })
 
-    test('creates .plaited/rules directory if missing', async () => {
+    test('creates .agents/rules directory if missing', async () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      const rulesDir = await Bun.file(join(testDir, '.plaited/rules/core.md')).exists()
+      const rulesDir = await Bun.file(join(testDir, '.agents/rules/core.md')).exists()
       expect(rulesDir).toBe(true)
     })
   })
@@ -131,7 +131,7 @@ describe('scaffold-rules', () => {
 
       // Check symlink exists and points to right place
       const linkTarget = await readlink(join(testDir, '.claude/rules'))
-      expect(linkTarget).toBe('../.plaited/rules')
+      expect(linkTarget).toBe('../.agents/rules')
     })
 
     test('creates symlink for .cursor/rules when .cursor exists', async () => {
@@ -141,7 +141,7 @@ describe('scaffold-rules', () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
       const linkTarget = await readlink(join(testDir, '.cursor/rules'))
-      expect(linkTarget).toBe('../.plaited/rules')
+      expect(linkTarget).toBe('../.agents/rules')
     })
 
     test('skips symlink if already exists with correct target', async () => {
@@ -174,22 +174,22 @@ describe('scaffold-rules', () => {
 
       const content = await Bun.file(join(testDir, 'AGENTS.md')).text()
       expect(content).toContain('## Rules')
-      expect(content).toContain('.plaited/rules/')
+      expect(content).toContain('.agents/rules/')
     })
 
     test('does not append if agent dir exists', async () => {
       await Bun.write(join(testDir, 'AGENTS.md'), '# AGENTS\n\nSome content\n')
-      await mkdir(join(testDir, '.plaited'), { recursive: true })
+      await mkdir(join(testDir, '.agents'), { recursive: true })
 
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
       const content = await Bun.file(join(testDir, 'AGENTS.md')).text()
-      // Should not have appended rules section (since .plaited exists)
+      // Should not have appended rules section (since .agents exists)
       expect(content).not.toContain('## Rules')
     })
 
     test('skips if AGENTS.md already has rules', async () => {
-      await Bun.write(join(testDir, 'AGENTS.md'), '# AGENTS\n\nSee .plaited/rules/ for rules\n')
+      await Bun.write(join(testDir, 'AGENTS.md'), '# AGENTS\n\nSee .agents/rules/ for rules\n')
 
       const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
 
@@ -207,7 +207,7 @@ describe('scaffold-rules', () => {
       expect(result).toHaveProperty('actions')
 
       expect(result.dryRun).toBe(false)
-      expect(result.targetRules).toBe('.plaited/rules')
+      expect(result.targetRules).toBe('.agents/rules')
       expect(result.actions).toBeArray()
     })
   })
@@ -248,7 +248,7 @@ describe('scaffold-rules', () => {
     test('core.md contains TypeScript conventions', async () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      const content = await Bun.file(join(testDir, '.plaited/rules/core.md')).text()
+      const content = await Bun.file(join(testDir, '.agents/rules/core.md')).text()
       expect(content).toContain('Type over interface')
       expect(content).toContain('Arrow functions')
     })
@@ -256,7 +256,7 @@ describe('scaffold-rules', () => {
     test('testing.md contains test conventions', async () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      const content = await Bun.file(join(testDir, '.plaited/rules/testing.md')).text()
+      const content = await Bun.file(join(testDir, '.agents/rules/testing.md')).text()
       expect(content).toContain('test not it')
       expect(content).toContain('No conditional assertions')
     })
@@ -264,7 +264,7 @@ describe('scaffold-rules', () => {
     test('rules include verification patterns', async () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      const content = await Bun.file(join(testDir, '.plaited/rules/core.md')).text()
+      const content = await Bun.file(join(testDir, '.agents/rules/core.md')).text()
       expect(content).toContain('*Verify:*')
       expect(content).toContain('*Fix:*')
     })
@@ -272,7 +272,7 @@ describe('scaffold-rules', () => {
     test('rules are compressed (no verbose examples)', async () => {
       await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.quiet()
 
-      const content = await Bun.file(join(testDir, '.plaited/rules/core.md')).text()
+      const content = await Bun.file(join(testDir, '.agents/rules/core.md')).text()
 
       // Should not have verbose code blocks with Good/Avoid patterns
       expect(content).not.toContain('// ✅ Good')

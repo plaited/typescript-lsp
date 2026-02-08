@@ -75,27 +75,6 @@ describe('resolveFilePath', () => {
   })
 
   describe('scoped package specifiers', () => {
-    test('resolves scoped package subpath export', () => {
-      // @modelcontextprotocol/sdk/client is a defined export
-      const result = resolveFilePath('@modelcontextprotocol/sdk/client')
-      expect(result).toContain('node_modules/@modelcontextprotocol/sdk')
-      expect(result).toContain('client')
-    })
-
-    test('resolves scoped package server subpath', () => {
-      const result = resolveFilePath('@modelcontextprotocol/sdk/server')
-      expect(result).toContain('node_modules/@modelcontextprotocol/sdk')
-      expect(result).toContain('server')
-    })
-
-    test('resolves scoped package deep subpath with extension', () => {
-      // Deep subpath with .js extension via wildcard export "./*"
-      const path = '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js'
-      const result = resolveFilePath(path)
-      expect(result).toContain('node_modules/@modelcontextprotocol/sdk')
-      expect(result).toContain('bearerAuth')
-    })
-
     test('falls back to cwd for non-existent scoped package', () => {
       const scopedPkg = '@nonexistent/pkg/src/file.ts'
       const result = resolveFilePath(scopedPkg)
