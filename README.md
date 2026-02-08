@@ -42,10 +42,10 @@ LSP understands re-exports, aliases, and type relationships.
 ## Install for AI Agents
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/plaited/skills-installer/main/install.sh | bash -s -- --agents <agent-name> --project development-skills
+npx skills add plaited/development-skills
+# or
+bunx skills add plaited/development-skills
 ```
-
-**Agents:** `claude` · `cursor` · `copilot` · `codex` · `gemini` · `windsurf` · `opencode` · `amp` · `goose` · `factory`
 
 ## Commands
 

@@ -2,7 +2,7 @@
 /**
  * Scaffold development rules - Copy bundled rules and create symlinks
  *
- * Copies rules from the package to `.plaited/rules/` (canonical location),
+ * Copies rules from the package to `.agents/rules/` (canonical location),
  * creates symlinks for `.claude/` and `.cursor/` agent directories,
  * and falls back to appending links in `AGENTS.md` if no agent dirs exist.
  *
@@ -15,18 +15,18 @@ import { mkdir, readdir, readlink, stat, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 
-/** Agents that get symlinks to .plaited/rules (not .plaited itself) */
+/** Agents that get symlinks to .agents/rules (not .agents itself) */
 const SYMLINK_AGENTS = ['.claude', '.cursor'] as const
 
-/** All supported agent directories (including .plaited which gets direct copy) */
-const ALL_AGENTS = ['.plaited', ...SYMLINK_AGENTS] as const
+/** All supported agent directories (including .agents which gets direct copy) */
+const ALL_AGENTS = ['.agents', ...SYMLINK_AGENTS] as const
 
 /** Canonical rules location */
-const TARGET_RULES = '.plaited/rules' as const
+const TARGET_RULES = '.agents/rules' as const
 
 /**
  * NOTE: This tool only scaffolds RULES, not skills.
- * Skills symlinks (.claude/skills -> ../.plaited/skills) are managed separately
+ * Skills symlinks (.claude/skills -> ../.agents/skills) are managed separately
  * via the skills-installer or manual setup.
  */
 
@@ -59,7 +59,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
   const dryRun = values['dry-run'] as boolean | undefined
   const listOnly = values.list as boolean | undefined
 
-  const sourceRules = join(import.meta.dir, '../.plaited/rules')
+  const sourceRules = join(import.meta.dir, '../.agents/rules')
   const cwd = process.cwd()
 
   // Get available rules
@@ -74,7 +74,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
   const actions: string[] = []
 
-  // Check for agent directories BEFORE copying (since copy creates .plaited/)
+  // Check for agent directories BEFORE copying (since copy creates .agents/)
   // This determines whether to fall back to AGENTS.md append
   let hadAgentDirBeforeScaffold = false
   for (const agent of ALL_AGENTS) {
@@ -84,7 +84,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
     }
   }
 
-  // 1. Copy rules to .plaited/rules/ (canonical location, serves .plaited agent)
+  // 1. Copy rules to .agents/rules/ (canonical location, serves .agents agent)
   const targetDir = join(cwd, TARGET_RULES)
   if (!dryRun) {
     await mkdir(targetDir, { recursive: true })
@@ -108,7 +108,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
       // Check if symlink already exists and points to right place
       try {
         const existing = await readlink(rulesLink)
-        if (existing === '../.plaited/rules') {
+        if (existing === '../.agents/rules') {
           actions.push(`skip: ${agent}/rules (symlink exists)`)
           continue
         }
@@ -117,9 +117,9 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
       }
 
       if (!dryRun) {
-        await symlink('../.plaited/rules', rulesLink)
+        await symlink('../.agents/rules', rulesLink)
       }
-      actions.push(`symlink: ${agent}/rules -> ../.plaited/rules`)
+      actions.push(`symlink: ${agent}/rules -> ../.agents/rules`)
     }
   }
 
@@ -130,7 +130,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
     if (await agentsMd.exists()) {
       const content = await agentsMd.text()
-      if (content.includes('.plaited/rules')) {
+      if (content.includes('.agents/rules')) {
         actions.push('skip: AGENTS.md (already has rules)')
       } else {
         const links = rules.map((f) => `- [${f.replace('.md', '')}](${TARGET_RULES}/${f})`).join('\n')
