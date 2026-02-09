@@ -9,11 +9,16 @@
 *Fix:* Add `.ts` extension
 
 **Re-export at boundaries** - Parent `feature.ts` re-exports from `feature/feature.ts`
-```
-src/
-├── acp/           # Feature module
-│   └── acp.ts     # Implementation
-└── acp.ts         # Re-exports public API
+
+```mermaid
+graph TD
+    A[src/] --> B[feature/]
+    A --> C[feature.ts]
+    B --> D[feature.ts]
+    B --> E[tests/]
+    E --> F[feature.spec.ts]
+    
+    C -.Re-exports.-> D
 ```
 
 **File organization within modules:**
