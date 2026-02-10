@@ -65,7 +65,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
     const startIdx = content.indexOf(RULES_START)
     const endIdx = content.indexOf(RULES_END)
 
-    if (startIdx !== -1 && endIdx !== -1) {
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
       const before = content.slice(0, startIdx)
       const after = content.slice(endIdx + RULES_END.length)
       if (!dryRun) {
@@ -91,7 +91,7 @@ export const scaffoldRules = async (args: string[]): Promise<void> => {
 
   if (await claudeMd.exists()) {
     const content = await claudeMd.text()
-    if (content.includes('@AGENTS.md')) {
+    if (/^@AGENTS\.md/m.test(content)) {
       actions.push('skip: CLAUDE.md (already references @AGENTS.md)')
     } else {
       if (!dryRun) {

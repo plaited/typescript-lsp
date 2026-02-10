@@ -127,6 +127,18 @@ describe('scaffold-rules', () => {
       expect(result.actions).toContain('append: AGENTS.md (rules section)')
     })
 
+    test('appends when markers are reversed (end before start)', async () => {
+      const reversed =
+        '# Project\n\n<!-- PLAITED-RULES-END -->\n\nMiddle\n\n<!-- PLAITED-RULES-START -->\n\nOld rules\n'
+      await Bun.write(join(testDir, 'AGENTS.md'), reversed)
+
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      const content = await Bun.file(join(testDir, 'AGENTS.md')).text()
+      expect(content).toContain('# Core Conventions')
+      expect(result.actions).toContain('append: AGENTS.md (rules section)')
+    })
+
     test('appends when only end marker exists (no start marker)', async () => {
       const malformed = '# Project\n\nSome content\n\n<!-- PLAITED-RULES-END -->\n'
       await Bun.write(join(testDir, 'AGENTS.md'), malformed)
@@ -157,6 +169,16 @@ describe('scaffold-rules', () => {
 
       const skipAction = result.actions.find((a) => a.includes('CLAUDE.md') && a.includes('skip'))
       expect(skipAction).toBeDefined()
+    })
+
+    test('adds reference when @AGENTS.md only appears inline (not at start of line)', async () => {
+      await Bun.write(join(testDir, 'CLAUDE.md'), '# Config\n\nSee `@AGENTS.md` for details\n')
+
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      const content = await Bun.file(join(testDir, 'CLAUDE.md')).text()
+      expect(content).toStartWith('@AGENTS.md\n\n')
+      expect(result.actions).toContain('update: CLAUDE.md (added @AGENTS.md reference)')
     })
 
     test('does not create CLAUDE.md if it does not exist', async () => {
