@@ -16,8 +16,8 @@
 ```
 bin/cli.ts              # CLI entry point
 src/                    # TypeScript source
-.agents/skills/        # Agent skills
-.agents/rules/         # Shared rules (bundled)
+skills/                 # Agent skills
+rules/                  # Shared rules (bundled)
 ```
 
 **Test CLI:** `bun bin/cli.ts <command>`  
@@ -38,7 +38,7 @@ After code changes:
 1. `bun run check` - Must pass
 2. `bun test` - Must pass  
 3. `bun bin/cli.ts <cmd>` - Test CLI changes
-4. For skills: `bunx @plaited/development-skills validate-skill .agents/skills`
+4. For skills: `bunx @plaited/development-skills validate-skill skills`
 
 **Rule compliance:** Read rules below, use verification patterns to self-check
 
@@ -59,13 +59,13 @@ After code changes:
 
 Compressed rules with embedded verification patterns:
 
-- @.agents/rules/core.md - TypeScript conventions (type>interface, no any, arrow fns)
-- @.agents/rules/testing.md - Test patterns (test>it, no conditional assertions)
-- @.agents/rules/modules.md - Module organization (no index.ts, explicit .ts)
-- @.agents/rules/workflow.md - Git + GitHub CLI patterns
-- @.agents/rules/bun.md - Bun APIs over Node.js
-- @.agents/rules/accuracy.md - 95% confidence, verify before stating
-- @.agents/rules/documentation.md - TSDoc standards
+- @rules/core.md - TypeScript conventions (type>interface, no any, arrow fns)
+- @rules/testing.md - Test patterns (test>it, no conditional assertions)
+- @rules/modules.md - Module organization (no index.ts, explicit .ts)
+- @rules/workflow.md - Git + GitHub CLI patterns
+- @rules/bun.md - Bun APIs over Node.js
+- @rules/accuracy.md - 95% confidence, verify before stating
+- @rules/documentation.md - TSDoc standards
 
 <!-- PLAITED-RULES-END -->
 

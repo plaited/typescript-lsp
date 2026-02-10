@@ -20,7 +20,7 @@
  *   bunx @plaited/development-skills lsp-hover src/index.ts 10 5
  *   bunx @plaited/development-skills lsp-find parseConfig
  *   bunx @plaited/development-skills validate-skill .claude/skills/my-skill
- *   bunx @plaited/development-skills scaffold-rules --agent=claude --format=json
+ *   bunx @plaited/development-skills scaffold-rules
  */
 
 import { lspAnalyze } from '../src/lsp-analyze.ts'
@@ -64,7 +64,7 @@ Examples:
   bunx @plaited/development-skills lsp-symbols src/app.ts
   bunx @plaited/development-skills lsp-analyze src/app.ts
   bunx @plaited/development-skills validate-skill .claude/skills/my-skill
-  bunx @plaited/development-skills scaffold-rules --agent=claude --format=json
+  bunx @plaited/development-skills scaffold-rules
 
 Options:
   -h, --help    Show this help
