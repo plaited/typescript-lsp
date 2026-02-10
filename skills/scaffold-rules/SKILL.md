@@ -67,6 +67,16 @@ Rules are written directly into `AGENTS.md` between markers:
 - **AGENTS.md with markers**: Replaces content between markers (preserves user content outside)
 - **CLAUDE.md exists**: Adds `@AGENTS.md` reference if not already present
 
+## Troubleshooting
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Rules duplicated in AGENTS.md | Markers were manually deleted | Remove duplicate section, re-run `scaffold-rules` |
+| Update didn't apply | Only one marker present (start or end) | Ensure both `<!-- PLAITED-RULES-START -->` and `<!-- PLAITED-RULES-END -->` exist, or delete both to get a fresh append |
+| `@AGENTS.md` not added to CLAUDE.md | CLAUDE.md doesn't exist | Create CLAUDE.md first, then re-run |
+
+**Do not** manually edit content between the `PLAITED-RULES-START` and `PLAITED-RULES-END` markers — it will be overwritten on next run.
+
 ## Related Skills
 
 - **validate-skill** - Validate skill directories against AgentSkills spec

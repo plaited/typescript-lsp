@@ -1,27 +1,26 @@
 # Skill Activation
 
-INSTRUCTION: MANDATORY SKILL ACTIVATION SEQUENCE
+**Evaluate before implementing** - Check available skills for relevance before starting work
 
-Step 1 - EVALUATE (do this in your response):
-For each skill in <available_skills>, state: [skill-name] - YES/NO - [reason]
+**Activation sequence:**
 
-Step 2 - ACTIVATE (do this immediately after Step 1):
-IF any skills are YES → Use Skill(skill-name) tool for EACH relevant skill NOW
-IF no skills are YES → State "No skills needed" and proceed
+1. **Evaluate** - For each skill in `<available_skills>`, assess: `[skill-name] - YES/NO - [reason]`
+2. **Activate** - Call `Skill(skill-name)` for each relevant skill before proceeding
+3. **Implement** - Begin work only after activation is complete
 
-Step 3 - IMPLEMENT:
-Only after Step 2 is complete, proceed with implementation.
+*Verify:* Did you check available skills before starting implementation?
+*Fix:* Pause, evaluate skills, activate relevant ones, then continue
 
-CRITICAL: You MUST call Skill() tool in Step 2. Do NOT skip to implementation.
-The evaluation (Step 1) is WORTHLESS unless you ACTIVATE (Step 2) the skills.
-
-Example of correct sequence:
+**Example:**
+```
 - code-patterns: NO - not writing code
 - git-workflow: YES - need commit conventions
 - documentation: YES - writing README
 
-[Then IMMEDIATELY use Skill() tool:]
 > Skill(git-workflow)
 > Skill(documentation)
+```
 
-[THEN and ONLY THEN start implementation]
+**Activation before implementation** - Evaluating skills without calling `Skill()` provides no benefit
+*Verify:* Check that `Skill()` was called for each YES evaluation
+*Fix:* Call `Skill(skill-name)` for skipped activations

@@ -115,6 +115,28 @@ describe('scaffold-rules', () => {
       expect(content).toContain('# Core Conventions')
       expect(result.actions).toContain('update: AGENTS.md (rules section)')
     })
+
+    test('appends when only start marker exists (no end marker)', async () => {
+      const malformed = '# Project\n\n<!-- PLAITED-RULES-START -->\n\nOrphan content\n'
+      await Bun.write(join(testDir, 'AGENTS.md'), malformed)
+
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      const content = await Bun.file(join(testDir, 'AGENTS.md')).text()
+      expect(content).toContain('# Core Conventions')
+      expect(result.actions).toContain('append: AGENTS.md (rules section)')
+    })
+
+    test('appends when only end marker exists (no start marker)', async () => {
+      const malformed = '# Project\n\nSome content\n\n<!-- PLAITED-RULES-END -->\n'
+      await Bun.write(join(testDir, 'AGENTS.md'), malformed)
+
+      const result: ScaffoldOutput = await $`cd ${testDir} && bun ${binDir}/cli.ts scaffold-rules`.json()
+
+      const content = await Bun.file(join(testDir, 'AGENTS.md')).text()
+      expect(content).toContain('# Core Conventions')
+      expect(result.actions).toContain('append: AGENTS.md (rules section)')
+    })
   })
 
   describe('CLAUDE.md behavior', () => {
